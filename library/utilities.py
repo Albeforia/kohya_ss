@@ -12,6 +12,7 @@ from library.blip_caption_gui import gradio_blip_caption_gui_tab
 from library.git_caption_gui import gradio_git_caption_gui_tab
 from library.wd14_caption_gui import gradio_wd14_caption_gui_tab
 from library.group_images_gui import gradio_group_images_gui_tab
+from library.preprocess_images_gui import gradio_preprocess_images_gui_tab
 
 
 def utilities_tab(
@@ -30,6 +31,7 @@ def utilities_tab(
         gradio_wd14_caption_gui_tab(headless=headless)
     gradio_convert_model_tab(headless=headless)
     gradio_group_images_gui_tab(headless=headless)
+    gradio_preprocess_images_gui_tab(headless=headless)
 
     return (
         train_data_dir_input,

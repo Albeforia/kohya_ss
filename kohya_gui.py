@@ -94,6 +94,8 @@ def UI(**kwargs):
         launch_kwargs['inbrowser'] = inbrowser
     if share:
         launch_kwargs['share'] = share
+    # FIXME When queue is enabled, we have to turn off the network proxy otherwise everything is irresponsible
+    # https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/9074
     interface.launch(**launch_kwargs)
 
 
