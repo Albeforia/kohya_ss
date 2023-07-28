@@ -28,5 +28,6 @@ voluptuous==0.13.1
 wandb==0.15.0
 localization==0.1.7
 shapely==2.0.1
+numexpr==2.8.4
 # for kohya_ss library
 -e . # no_verify leave this to specify not checking this a verification stage
