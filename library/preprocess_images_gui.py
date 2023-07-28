@@ -89,7 +89,7 @@ def process_images(
     run_cmd2 += f' "blur"'  # Sort method
     run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
 
-    def check_progress():
+    def check_progress(process):
         count = 0
         while True:
             output = process.stdout.readline().decode()
@@ -112,7 +112,8 @@ def process_images(
 
     if os.name == 'posix':
         os.system(run_cmd)
-        return {info_text: gr.update(value=output_folder)}
+        os.system(run_cmd2)
+        return []  # TODO
     else:
         subprocess.run(run_cmd)
         subprocess.run(run_cmd2)
