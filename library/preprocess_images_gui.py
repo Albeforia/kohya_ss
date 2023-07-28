@@ -56,7 +56,8 @@ def clear_upload_images(input_folder):
     ]
 
 
-def clear_images(input_folder):
+# Clear images for training
+def clear_images(input_folder, preview_images_dict):
     if input_folder == '':
         return [
             gr.update(value=[]),
@@ -69,8 +70,9 @@ def clear_images(input_folder):
             shutil.rmtree(item)
         else:
             item.unlink()
+    preview_images_dict.clear()
     return [
-        gr.update(value=[]),
+        gr.update(value=[], visible=False), # hide Gallery
         gr.update(value=f"`Data folder cleared`")
     ]
 
@@ -81,13 +83,14 @@ def process_images(
         target_width,
         target_height,
         repeat,
-        drop_threshold
+        drop_threshold,
+        preview_images_dict
         # progress=gr.Progress()
 ):
     if input_folder == '':
         return [
             "",
-            gr.update(value=[]),
+            gr.update(value=[], visible=False),  # hide Gallery
             gr.update(value=f"`Please upload images first!`")
         ]
 
@@ -134,9 +137,10 @@ def process_images(
 
     def output():
         images = list(Path(output_folder).glob('*'))
+        preview_images_dict.update({output_folder: images})
         return [
             f"{input_folder}/../processed",
-            gr.update(value=images),
+            gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),  # show Gallery
             gr.update(value=f"`Face detection done, {face_type}`")
         ]
 
@@ -258,7 +262,7 @@ def caption_images(
 
 # ref: gradio_wd14_caption_gui_tab
 def _gradio_wd14_caption_gui(train_folder, info_text):
-    with gr.Accordion('[2] Captioning', open=False):
+    with gr.Accordion('[Step 2] Captioning', open=False):
         with gr.Row():
             prefix = gr.Textbox(
                 label='Prefix to add to WD14 caption',
@@ -330,11 +334,11 @@ def gradio_preprocess_images_gui_tab(headless=False):
     with gr.Tab('数字分身'):
         upload_folder = gr.State('')
         train_folder = gr.State('')
+        preview_images_dict = gr.State({})
 
-        with gr.Accordion('Info'):
-            info_text = gr.Markdown()
+        info_text = gr.Markdown()
 
-        with gr.Accordion('[0] Select the image folder to upload'):
+        with gr.Accordion('[Step 0] Select the image folder to upload'):
             with gr.Row(equal_height=False):
                 upload_images = gr.File(
                     show_label=False,
@@ -344,7 +348,9 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 clear_upload_button = gr.Button('Clear uploaded images', variant='stop', scale=0)
                 clear_train_button = gr.Button('Clear training folder', variant='stop', scale=0)
 
-        with gr.Accordion('[1] Face detection and cropping', open=False):
+        images_preview = gr.Gallery(preview=True, columns=8, visible=False)
+
+        with gr.Accordion('[Step 1] Face detection and cropping', open=False):
             with gr.Row():
                 face_type = gr.Dropdown(
                     label='Face detection type',
@@ -365,14 +371,13 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
                 drop_threshold = gr.Slider(label='Discard blurry images', value=0.1, minimum=0, maximum=1,
                                            step=0.05)
-            images_preview = gr.Gallery(preview=True, columns=8)
 
             with gr.Row():
                 submit_images_button = gr.Button('Process images', variant='primary')
 
         _gradio_wd14_caption_gui(train_folder, info_text)
 
-        with gr.Accordion('[3] Train'):
+        with gr.Accordion('[Step 3] Train'):
             pass  # TODO
 
         # Event listeners
@@ -391,6 +396,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_height,
                 repeat,
                 drop_threshold,
+                preview_images_dict,
             ],
             outputs=[
                 train_folder,
@@ -412,7 +418,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
         )
         clear_train_button.click(
             clear_images,
-            inputs=[train_folder],
+            inputs=[train_folder, preview_images_dict],
             outputs=[
                 images_preview,
                 info_text,
