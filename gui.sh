@@ -66,6 +66,6 @@ else
 fi
 
 # Validate the requirements and run the script if successful
-if python "$SCRIPT_DIR/setup/validate_requirements.py" -r "$REQUIREMENTS_FILE"; then
-    python "$SCRIPT_DIR/kohya_gui.py" "$@"
+if python3 "$SCRIPT_DIR/setup/validate_requirements.py" -r "$REQUIREMENTS_FILE"; then
+    python3 "$SCRIPT_DIR/kohya_gui.py" "$@"
 fi

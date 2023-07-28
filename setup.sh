@@ -202,9 +202,9 @@ install_python_dependencies() {
   case "$OSTYPE" in
     "lin"*)
       if [ "$RUNPOD" = true ]; then
-        python "$SCRIPT_DIR/setup/setup_linux.py" --platform-requirements-file=requirements_runpod.txt
+        python3 "$SCRIPT_DIR/setup/setup_linux.py" --platform-requirements-file=requirements_runpod.txt
       else
-        python "$SCRIPT_DIR/setup/setup_linux.py" --platform-requirements-file=requirements_linux.txt
+        python3 "$SCRIPT_DIR/setup/setup_linux.py" --platform-requirements-file=requirements_linux.txt
       fi
       ;;
     "darwin"*)
