@@ -29,5 +29,8 @@ wandb==0.15.0
 localization==0.1.7
 shapely==2.0.1
 numexpr==2.8.4
+h5py==3.9.0
+scikit-image==0.21.0
+colorama==0.4.6
 # for kohya_ss library
 -e . # no_verify leave this to specify not checking this a verification stage
