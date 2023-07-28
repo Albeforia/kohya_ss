@@ -335,7 +335,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
             info_text = gr.Markdown()
 
         with gr.Accordion('[0] Select the image folder to upload'):
-            with gr.Row().style(equal_height=False):
+            with gr.Row(equal_height=False):
                 upload_images = gr.File(
                     show_label=False,
                     file_count='directory',
