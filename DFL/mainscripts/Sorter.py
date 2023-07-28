@@ -948,6 +948,11 @@ def main():
     sort_by_method = args.method
     drop_threshold = args.threshold
 
+    # Skip empty folder
+    img_list = [(filename) for filename in pathex.get_image_paths(input_path)]
+    if len(img_list) <= 0:
+        return
+
     if sort_by_method is None:
         io.log_info(f"Choose sorting method:")
 
