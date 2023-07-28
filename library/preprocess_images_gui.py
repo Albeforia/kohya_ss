@@ -110,10 +110,18 @@ def process_images(
             yield None
         yield count
 
+    def output():
+        images = list(Path(output_folder).glob('*'))
+        return [
+            f"{input_folder}/../processed",
+            gr.update(value=images),
+            gr.update(value=f"`Face detection done, {face_type}`")
+        ]
+
     if os.name == 'posix':
         os.system(run_cmd)
         os.system(run_cmd2)
-        return []  # TODO
+        return output()
     else:
         subprocess.run(run_cmd)
         subprocess.run(run_cmd2)
@@ -124,12 +132,7 @@ def process_images(
         # )
         # for _ in progress.tqdm(check_progress(), desc="Processing"):
         #     pass
-        images = list(Path(output_folder).glob('*'))
-        return [
-            f"{input_folder}/../processed",
-            gr.update(value=images),
-            gr.update(value=f"`Face detection done, {face_type}`")
-        ]
+        return output()
 
 
 def gradio_preprocess_images_gui_tab(headless=False):
