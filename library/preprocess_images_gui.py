@@ -23,7 +23,9 @@ def on_images_uploaded(files):
 
     # Move images to workspace
     for file in files:
-        if file.name.endswith(('.png', '.jpg', '.jpeg')):
+        _, ext = os.path.splitext(file.name)
+        ext = ext.lower()
+        if ext in ['.png', '.jpg', '.jpeg']:
             shutil.move(file.name, output_folder)
 
     return [
@@ -126,7 +128,8 @@ def gradio_preprocess_images_gui_tab(headless=False):
                     value='full_face'
                 )
                 target_width = gr.Slider(label='Output width', value=512, minimum=256, maximum=2048, step=64)
-                target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64)
+                target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64,
+                                          visible=False)
                 repeat = gr.Slider(label='Repeat', value=6, minimum=2, maximum=20, step=1)
 
             submit_images_button = gr.Button('Submit')
