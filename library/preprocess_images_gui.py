@@ -1,5 +1,7 @@
+import datetime
 import os
 import re
+import shutil
 import subprocess
 import time
 
@@ -7,7 +9,6 @@ import gradio as gr
 from easygui import msgbox
 
 from library.custom_logging import setup_logging
-from .common_gui import get_folder_path
 
 # Set up logging
 log = setup_logging()
@@ -15,19 +16,35 @@ log = setup_logging()
 PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 
+def on_images_uploaded(files):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', current_time, 'original')
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Move images to workspace
+    for file in files:
+        if file.name.endswith(('.png', '.jpg', '.jpeg')):
+            shutil.move(file.name, output_folder)
+
+    return [
+        output_folder,
+        gr.update(value=f"`Images uploaded to: {output_folder}`")
+    ]
+
+
 def process_images(
         input_folder,
         face_type,
         target_width,
         target_height,
-        jpeg_quality,
+        repeat
         # progress=gr.Progress()
 ):
     if input_folder == '':
         msgbox('Input folder is missing...')
         return
 
-    output_folder = f"{input_folder}/_processed"
+    output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
 
     log.info(f'Processing images in {input_folder}...')
     # progress(0.0, desc="Start Processing")
@@ -38,7 +55,7 @@ def process_images(
     run_cmd += f' "{face_type}"'
     run_cmd += f' "{target_width}"'
     run_cmd += f' "{target_height}"'
-    run_cmd += f' "{jpeg_quality}"'
+    run_cmd += f' "100"'  # jpeg quality
 
     log.info(run_cmd)
 
@@ -65,7 +82,7 @@ def process_images(
 
     if os.name == 'posix':
         os.system(run_cmd)
-        return output_folder
+        return {info_text: gr.update(value=output_folder)}
     else:
         subprocess.run(run_cmd)
         # process = subprocess.Popen(
@@ -75,59 +92,70 @@ def process_images(
         # )
         # for _ in progress.tqdm(check_progress(), desc="Processing"):
         #     pass
-        return output_folder
+        return [
+            f"{input_folder}/../processed",
+            gr.update(value=f"`Face detection done, {face_type}`")
+        ]
 
 
 def gradio_preprocess_images_gui_tab(headless=False):
-    with gr.Tab('Preprocess Images'):
-        with gr.Row():
-            input_folder = gr.Textbox(
-                label='Input folder',
-                placeholder='Directory containing the images to group',
-                interactive=True,
-            )
-            button_input_folder = gr.Button(
-                '📂', elem_id='open_folder_small', visible=(not headless)
-            )
-            button_input_folder.click(
-                get_folder_path,
-                outputs=input_folder,
-                show_progress=False,
+    with gr.Tab('数字分身'):
+        upload_folder = gr.State('')
+        train_folder = gr.State('')
+
+        with gr.Accordion('Select the image folder to upload'):
+            upload_images = gr.File(
+                show_label=False,
+                file_count='directory',
+                # file_types=['image']
             )
 
-        with gr.Row():
-            face_type = gr.Dropdown(
-                label='Face detection type',
-                choices=[
-                    'half_face',
-                    'midfull_face',
-                    'full_face',
-                    'full_face_no_align',
-                    'whole_face',
-                    'head',
-                    'head_no_align',
-                ],
-                value='full_face'
-            )
-            target_width = gr.Slider(label='Output width', value=512, minimum=256, maximum=2048, step=64)
-            target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64)
-            jpeg_quality = gr.Slider(label='Jpeg quality', value=90, minimum=1, maximum=100, step=5)
+        with gr.Accordion('Face detection and cropping', open=False):
+            with gr.Row():
+                face_type = gr.Dropdown(
+                    label='Face detection type',
+                    choices=[
+                        'half_face',
+                        'midfull_face',
+                        'full_face',
+                        'full_face_no_align',
+                        'whole_face',
+                        'head',
+                        'head_no_align',
+                    ],
+                    value='full_face'
+                )
+                target_width = gr.Slider(label='Output width', value=512, minimum=256, maximum=2048, step=64)
+                target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64)
+                repeat = gr.Slider(label='Repeat', value=6, minimum=2, maximum=20, step=1)
 
-        # Output
-        text_output = gr.Textbox(label='Output folder')
+            submit_images_button = gr.Button('Submit')
 
-        submit_images_button = gr.Button('Submit')
+        with gr.Accordion('Train'):
+            pass
+
+        with gr.Accordion('Info'):
+            info_text = gr.Markdown()
+
+        # Event listeners
+        upload_images.upload(
+            on_images_uploaded,
+            inputs=[upload_images],  # files
+            outputs=[upload_folder, info_text],
+        )
+
         submit_images_button.click(
             process_images,
             inputs=[
-                input_folder,
+                upload_folder,
                 face_type,
                 target_width,
                 target_height,
-                jpeg_quality,
+                repeat,
             ],
             outputs=[
-                text_output,
+                train_folder,
+                info_text,
             ],
             show_progress=False,
             api_name='preprocess_images'

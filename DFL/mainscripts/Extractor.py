@@ -225,6 +225,11 @@ class ExtractSubprocessor(Subprocessor):
                     # TODO Output correct resolution
                     face_image = cv2.warpAffine(image, image_to_face_mat, (image_size, int(image_size * 1.5)),
                                                 cv2.INTER_LANCZOS4)
+                    # Random flip image for augmentation
+                    random_number = np.random.rand()
+                    if random_number > 0.5:
+                        face_image = cv2.flip(face_image, 1)
+
                     face_image_landmarks = LandmarksProcessor.transform_points(image_landmarks, image_to_face_mat)
 
                     landmarks_bbox = LandmarksProcessor.transform_points(
@@ -856,7 +861,6 @@ def main():
             for filename in pathex.get_image_paths(output_debug_path):
                 Path(filename).unlink()
 
-    io.log_info('-------------------------')
     images_found = len(input_image_paths)
     faces_detected = 0
     if images_found != 0:
@@ -902,7 +906,6 @@ def main():
 
     # io.log_info('Images found:        %d' % images_found)
     io.log_info('[DONE] %d' % faces_detected)
-    io.log_info('-------------------------')
 
 
 if __name__ == "__main__":
