@@ -4,9 +4,9 @@ import re
 import shutil
 import subprocess
 import time
+from pathlib import Path
 
 import gradio as gr
-from easygui import msgbox
 
 from library.custom_logging import setup_logging
 
@@ -34,17 +34,40 @@ def on_images_uploaded(files):
     ]
 
 
+def clear_images(input_folder):
+    if input_folder == '':
+        return [
+            gr.update(value=[]),
+            gr.update(value=f"`Nothing to clear`")
+        ]
+
+    dir_path = Path(input_folder)
+    for item in dir_path.iterdir():
+        if item.is_dir():
+            shutil.rmtree(item)
+        else:
+            item.unlink()
+    return [
+        gr.update(value=[]),
+        gr.update(value=f"`Data folder cleared`")
+    ]
+
+
 def process_images(
         input_folder,
         face_type,
         target_width,
         target_height,
-        repeat
+        repeat,
+        drop_threshold
         # progress=gr.Progress()
 ):
     if input_folder == '':
-        msgbox('Input folder is missing...')
-        return
+        return [
+            "",
+            gr.update(value=[]),
+            gr.update(value=f"`Please upload images first!`")
+        ]
 
     output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
 
@@ -60,6 +83,11 @@ def process_images(
     run_cmd += f' "100"'  # jpeg quality
 
     log.info(run_cmd)
+
+    run_cmd2 = f'{PYTHON} "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
+    run_cmd2 += f' "{output_folder}"'
+    run_cmd2 += f' "blur"'  # Sort method
+    run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
 
     def check_progress():
         count = 0
@@ -87,6 +115,7 @@ def process_images(
         return {info_text: gr.update(value=output_folder)}
     else:
         subprocess.run(run_cmd)
+        subprocess.run(run_cmd2)
         # process = subprocess.Popen(
         #     run_cmd,
         #     stdout=subprocess.PIPE,
@@ -94,8 +123,10 @@ def process_images(
         # )
         # for _ in progress.tqdm(check_progress(), desc="Processing"):
         #     pass
+        images = list(Path(output_folder).glob('*'))
         return [
             f"{input_folder}/../processed",
+            gr.update(value=images),
             gr.update(value=f"`Face detection done, {face_type}`")
         ]
 
@@ -130,9 +161,14 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_width = gr.Slider(label='Output width', value=512, minimum=256, maximum=2048, step=64)
                 target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64,
                                           visible=False)
-                repeat = gr.Slider(label='Repeat', value=6, minimum=2, maximum=20, step=1)
+                repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
+                drop_threshold = gr.Slider(label='Discard blurry images', value=0.1, minimum=0, maximum=1,
+                                           step=0.05)
+            images_preview = gr.Gallery(preview=True, columns=8)
 
-            submit_images_button = gr.Button('Submit')
+            with gr.Row():
+                submit_images_button = gr.Button('Submit', variant='primary')
+                clear_images_button = gr.Button('Clear', variant='stop')
 
         with gr.Accordion('Train'):
             pass
@@ -155,11 +191,23 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_width,
                 target_height,
                 repeat,
+                drop_threshold,
             ],
             outputs=[
                 train_folder,
+                images_preview,
                 info_text,
             ],
             show_progress=False,
             api_name='preprocess_images'
+        )
+
+        clear_images_button.click(
+            clear_images,
+            inputs=[train_folder],
+            outputs=[
+                images_preview,
+                info_text,
+            ],
+            show_progress=False
         )
