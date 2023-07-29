@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 import re
 import shutil
@@ -337,6 +338,11 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
             api_name='human_caption'
         )
 
+config_file = 'presets/lora/lora_config.json'
+def load_lora_config():
+    with open(config_file) as f:
+        return json.load(f)
+
 
 def gradio_preprocess_images_gui_tab(headless=False):
     with gr.Tab('数字分身'):
@@ -389,6 +395,9 @@ def gradio_preprocess_images_gui_tab(headless=False):
         _gradio_wd14_caption_gui(train_folder, info_text)
 
         with gr.Accordion('[Step 3] Train', open=False):
+            with gr.Accordion('Params', open=False):
+                lora_config_json = gr.JSON(load_lora_config, show_label=False)
+
             (
                 lora_train_data_dir,
                 lora_reg_data_dir,
