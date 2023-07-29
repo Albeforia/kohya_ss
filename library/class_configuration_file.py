@@ -20,6 +20,7 @@ class ConfigurationFile:
                     label='',
                     placeholder="type the configuration file path or use the 'Open' button above to select it...",
                     interactive=True,
+                    value='presets/lora/lora_config.json'   # HACK provide a default file
                 )
                 self.button_load_config = gr.Button('Load 💾', elem_id='open_folder')
                 self.config_file_name.blur(
