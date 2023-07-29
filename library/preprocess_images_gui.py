@@ -10,6 +10,7 @@ import gradio as gr
 
 import library.train_util as train_util
 from library.custom_logging import setup_logging
+from lora_gui import lora_tab
 
 # Set up logging
 log = setup_logging()
@@ -91,7 +92,9 @@ def process_images(
         return [
             "",
             gr.update(value=[], visible=False),  # hide Gallery
-            gr.update(value=f"`Please upload images first!`")
+            gr.update(value=f"`Please upload images first!`"),
+            gr.update(value=''),
+            gr.update(value='')
         ]
 
     output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
@@ -142,7 +145,9 @@ def process_images(
             f"{input_folder}/../processed",
             # show Gallery
             gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
-            gr.update(value=f"`Face detection done, {face_type}`")
+            gr.update(value=f"`Face detection done, {face_type}`"),
+            gr.update(value=f"{input_folder}/../processed"),
+            gr.update(value=f"{input_folder}/../output")
         ]
 
     if os.name == 'posix':
@@ -382,8 +387,13 @@ def gradio_preprocess_images_gui_tab(headless=False):
 
         _gradio_wd14_caption_gui(train_folder, info_text)
 
-        with gr.Accordion('[Step 3] Train'):
-            pass  # TODO
+        with gr.Accordion('[Step 3] Train', open=False):
+            (
+                lora_train_data_dir,
+                lora_reg_data_dir,
+                lora_output_dir,
+                lora_logging_dir,
+            ) = lora_tab(headless=True)
 
         # Event listeners
         upload_images.upload(
@@ -407,6 +417,8 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 train_folder,
                 images_preview,
                 info_text,
+                lora_train_data_dir,
+                lora_output_dir,
             ],
             show_progress=False,
         )
