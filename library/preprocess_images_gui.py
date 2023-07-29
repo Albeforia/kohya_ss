@@ -334,13 +334,14 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
             ],
             outputs=[info_text],
             show_progress=False,
+            api_name='human_caption'
         )
 
 
 def gradio_preprocess_images_gui_tab(headless=False):
     with gr.Tab('数字分身'):
-        upload_folder = gr.State('')
-        train_folder = gr.State('')
+        upload_folder = gr.Textbox(visible=False)
+        train_folder = gr.Textbox(visible=False)
         preview_images_dict = gr.State({})
 
         info_text = gr.Markdown()
@@ -421,6 +422,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 lora_output_dir,
             ],
             show_progress=False,
+            api_name='human_preprocess'
         )
 
         clear_upload_button.click(
