@@ -345,7 +345,7 @@ def load_lora_config():
 
 
 def gradio_preprocess_images_gui_tab(headless=False):
-    with gr.Tab('数字分身'):
+    with gr.Tab('人像训练'):
         upload_folder = gr.Textbox(visible=False)
         train_folder = gr.Textbox(visible=False)
         preview_images_dict = gr.State({})
