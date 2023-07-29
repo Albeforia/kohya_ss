@@ -72,7 +72,7 @@ def clear_images(input_folder, preview_images_dict):
             item.unlink()
     preview_images_dict.clear()
     return [
-        gr.update(value=[], visible=False), # hide Gallery
+        gr.update(value=[], visible=False),  # hide Gallery
         gr.update(value=f"`Data folder cleared`")
     ]
 
@@ -140,7 +140,8 @@ def process_images(
         preview_images_dict.update({output_folder: images})
         return [
             f"{input_folder}/../processed",
-            gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),  # show Gallery
+            # show Gallery
+            gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
             gr.update(value=f"`Face detection done, {face_type}`")
         ]
 
@@ -235,6 +236,7 @@ def caption_images(
 
     run_cmd += f' --recursive'
     run_cmd += f' --remove_underscore'
+    run_cmd += f' --frequency_tags'
 
     if not undesired_tags == '':
         run_cmd += f' --undesired_tags="{undesired_tags}"'
@@ -338,6 +340,10 @@ def gradio_preprocess_images_gui_tab(headless=False):
 
         info_text = gr.Markdown()
 
+        with gr.Row():
+            clear_upload_button = gr.Button('Clear uploaded images', variant='stop', scale=0)
+            clear_train_button = gr.Button('Clear training folder', variant='stop', scale=0)
+
         with gr.Accordion('[Step 0] Select the image folder to upload'):
             with gr.Row(equal_height=False):
                 upload_images = gr.File(
@@ -345,10 +351,9 @@ def gradio_preprocess_images_gui_tab(headless=False):
                     file_count='directory',
                     # file_types=['image']
                 )
-                clear_upload_button = gr.Button('Clear uploaded images', variant='stop', scale=0)
-                clear_train_button = gr.Button('Clear training folder', variant='stop', scale=0)
 
-        images_preview = gr.Gallery(preview=True, columns=8, visible=False)
+        with gr.Row():
+            images_preview = gr.Gallery(preview=True, columns=8, visible=False, scale=2)
 
         with gr.Accordion('[Step 1] Face detection and cropping', open=False):
             with gr.Row():

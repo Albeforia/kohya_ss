@@ -119,7 +119,9 @@ def main(args):
 
     tag_freq = {}
 
-    undesired_tags = set(args.undesired_tags.split(","))
+    tags_split = args.undesired_tags.split(",")
+    tags_split =  [item.strip() for item in tags_split] # ensure no spaces in tags
+    undesired_tags = set(tags_split)
 
     def run_batch(path_imgs):
         imgs = np.array([im for _, im in path_imgs])
