@@ -2,6 +2,7 @@
 import math
 import multiprocessing
 import os
+import random
 import shutil
 import sys
 
@@ -18,6 +19,16 @@ from DFL.core.leras import nn
 from DFL.facelib import FaceType, LandmarksProcessor, S3FDExtractor, FANExtractor
 
 DEBUG = False
+
+
+def select_elements(array, ratio):
+    if ratio < 0 or ratio > 1:
+        raise ValueError("ratio must be between 0 and 1")
+
+    num_elements = int(len(array) * ratio)
+    selected_elements = random.sample(array, num_elements)
+
+    return selected_elements
 
 
 class ExtractSubprocessor(Subprocessor):
@@ -756,6 +767,7 @@ def main():
     parser.add_argument('target_width', type=int)
     parser.add_argument('target_height', type=int)
     parser.add_argument('jpeg_quality', type=int)
+    parser.add_argument('pass_ratio', type=float)
 
     args = parser.parse_args()
 
@@ -766,6 +778,7 @@ def main():
     image_width = args.target_width
     image_height = args.target_height
     jpeg_quality = args.jpeg_quality
+    pass_ratio = args.pass_ratio
 
     if not input_path.exists():
         io.log_err('[ERROR]Input directory not found. Please ensure it exists.')
@@ -865,6 +878,9 @@ def main():
         if not continue_extraction and output_debug_path.exists():
             for filename in pathex.get_image_paths(output_debug_path):
                 Path(filename).unlink()
+
+    # Random pass
+    input_image_paths = select_elements(input_image_paths, pass_ratio)
 
     images_found = len(input_image_paths)
     faces_detected = 0

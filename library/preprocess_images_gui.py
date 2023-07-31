@@ -107,6 +107,7 @@ def process_images(
         target_height,
         repeat,
         drop_threshold,
+        pass_ratio,
         preview_images_dict,
         lora_config_json,
         # progress=gr.Progress()
@@ -131,6 +132,7 @@ def process_images(
     run_cmd += f' "{target_width}"'
     run_cmd += f' "{target_height}"'
     run_cmd += f' "100"'  # jpeg quality
+    run_cmd += f' "{pass_ratio}"'
 
     log.info(run_cmd)
 
@@ -413,7 +415,9 @@ def gradio_preprocess_images_gui_tab(headless=False):
                                           visible=False)
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
                 drop_threshold = gr.Slider(label='Discard blurry images', value=0.0, minimum=0, maximum=1,
-                                           step=0.05)
+                                           step=0.05, visible=False)  # not used
+                pass_ratio = gr.Slider(label='Pass ratio', value=1.0, minimum=0, maximum=1, step=0.1,
+                                           info='Only this ratio of images will proceed to cropping')
 
             with gr.Row():
                 submit_images_button = gr.Button('Process images', variant='primary')
@@ -456,6 +460,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_height,
                 repeat,
                 drop_threshold,
+                pass_ratio,
                 preview_images_dict,
                 lora_config_json,
             ],
