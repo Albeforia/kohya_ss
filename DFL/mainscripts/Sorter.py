@@ -875,6 +875,12 @@ def sort_by_absdiff(input_path):
 def final_process(input_path, img_list, trash_img_list):
     import uuid
 
+    def get_first_elem_or_self(var):
+        if isinstance(var, tuple):
+            return var[0]
+        else:
+            return var
+
     if len(trash_img_list) != 0:
         parent_input_path = input_path.parent
         trash_path = parent_input_path.parent / (input_path.stem + '_trash')
@@ -899,7 +905,7 @@ def final_process(input_path, img_list, trash_img_list):
     if len(img_list) != 0:
         # Ensure all files have different names
         for i in io.progress_bar_generator([*range(len(img_list))], "Renaming", leave=False):
-            src = Path(img_list[i][0])
+            src = Path(get_first_elem_or_self(img_list[i]))
             dst = input_path / ('%.5d_%s' % (i, src.name))
             try:
                 src.rename(dst)
@@ -907,7 +913,7 @@ def final_process(input_path, img_list, trash_img_list):
                 io.log_info('fail to rename %s' % (src.name))
 
         for i in io.progress_bar_generator([*range(len(img_list))], "Renaming"):
-            src = Path(img_list[i][0])
+            src = Path(get_first_elem_or_self(img_list[i]))
             src = input_path / ('%.5d_%s' % (i, src.name))
             dst = input_path / ('%s%s' % (uuid.uuid4(), src.suffix))
             try:
@@ -972,7 +978,9 @@ def main():
         sort_by_method = sort_by_method.lower()
 
     desc, func = sort_func_methods[sort_by_method]
-    img_list, trash_img_list = func(input_path, drop_threshold)
+    trash_img_list = []
+    if drop_threshold > 0:
+        img_list, trash_img_list = func(input_path, drop_threshold)
 
     final_process(input_path, img_list, trash_img_list)
 
