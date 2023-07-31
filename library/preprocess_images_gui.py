@@ -53,7 +53,8 @@ def on_images_uploaded(files):
 
     return [
         output_folder,
-        gr.update(value=f"`Images uploaded to: {output_folder}`")
+        gr.update(value=f"`Images uploaded to: {output_folder}`"),
+        gr.update(value=config_file)  # config_file_name
     ]
 
 
@@ -426,13 +427,15 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 lora_reg_data_dir,
                 lora_output_dir,
                 lora_logging_dir,
+                # new
+                config_file_name,
             ) = lora_tab(headless=True)
 
         # Event listeners
         upload_images.upload(
             on_images_uploaded,
             inputs=[upload_images],  # files
-            outputs=[upload_folder, info_text],
+            outputs=[upload_folder, info_text, config_file_name],
         )
 
         submit_images_button.click(

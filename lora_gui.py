@@ -1617,6 +1617,8 @@ def lora_tab(
         folders.reg_data_dir,
         folders.output_dir,
         folders.logging_dir,
+        # new
+        config.config_file_name,
     )
 
 
