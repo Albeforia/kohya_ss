@@ -21,7 +21,7 @@ PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 config_file = 'presets/lora/user_presets/lora_config.json'
 
 
-def on_images_uploaded(files):
+def on_images_uploaded(files, auto_matting):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_folder = os.path.join('_workspace', current_time, 'original')
     os.makedirs(output_folder, exist_ok=True)
@@ -34,22 +34,22 @@ def on_images_uploaded(files):
             shutil.move(file.name, output_folder)
 
     # Matting
-    tmp_folder = f"{output_folder}_"
-    os.rename(output_folder, tmp_folder)
-    run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
-    run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
-    run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
-    run_cmd += f' "--image_path={tmp_folder}"'
-    run_cmd += f' "--save_dir={output_folder}"'
-    run_cmd += f' "--fg_estimate=True"'
-    run_cmd += f' "--background=w"'
+    if auto_matting:
+        tmp_folder = f"{output_folder}_"
+        os.rename(output_folder, tmp_folder)
+        run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
+        run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
+        run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
+        run_cmd += f' "--image_path={tmp_folder}"'
+        run_cmd += f' "--save_dir={output_folder}"'
+        run_cmd += f' "--fg_estimate=True"'
+        run_cmd += f' "--background=w"'
 
-    log.info(run_cmd)
-
-    if os.name == 'posix':
-        os.system(run_cmd)
-    else:
-        subprocess.run(run_cmd)
+        log.info(run_cmd)
+        if os.name == 'posix':
+            os.system(run_cmd)
+        else:
+            subprocess.run(run_cmd)
 
     return [
         output_folder,
@@ -385,8 +385,10 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 upload_images = gr.File(
                     show_label=False,
                     file_count='directory',
-                    # file_types=['image']
+                    # file_types=['image'],
+                    sacle=2
                 )
+                auto_matting = gr.Checkbox(value=True, label='Auto matting', scale=0)
 
         with gr.Row():
             images_preview = gr.Gallery(preview=True, columns=8, visible=False, scale=2)
@@ -434,8 +436,15 @@ def gradio_preprocess_images_gui_tab(headless=False):
         # Event listeners
         upload_images.upload(
             on_images_uploaded,
-            inputs=[upload_images],  # files
-            outputs=[upload_folder, info_text, config_file_name],
+            inputs=[
+                upload_images,  # files
+                auto_matting
+            ],
+            outputs=[
+                upload_folder,
+                info_text,
+                config_file_name
+            ],
         )
 
         submit_images_button.click(
