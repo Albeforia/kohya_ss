@@ -18,6 +18,8 @@ log = setup_logging()
 
 PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
+config_file = 'presets/lora/user_presets/lora_config.json'
+
 
 def on_images_uploaded(files):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -86,7 +88,8 @@ def process_images(
         target_height,
         repeat,
         drop_threshold,
-        preview_images_dict
+        preview_images_dict,
+        lora_config_json,
         # progress=gr.Progress()
 ):
     if input_folder == '':
@@ -94,8 +97,7 @@ def process_images(
             "",
             gr.update(value=[], visible=False),  # hide Gallery
             gr.update(value=f"`Please upload images first!`"),
-            gr.update(value=''),
-            gr.update(value='')
+            lora_config_json,
         ]
 
     output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
@@ -142,13 +144,16 @@ def process_images(
     def output():
         images = list(Path(output_folder).glob('*'))
         preview_images_dict.update({output_folder: images})
+        lora_config_json.update({'train_data_dir': f"{input_folder}/../processed"})
+        lora_config_json.update({'output_dir': f"{input_folder}/../output"})
+        with open(config_file, 'w') as json_file:
+            json.dump(lora_config_json, json_file)
         return [
             f"{input_folder}/../processed",
             # show Gallery
             gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
             gr.update(value=f"`Face detection done, {face_type}`"),
-            gr.update(value=f"{input_folder}/../processed"),
-            gr.update(value=f"{input_folder}/../output")
+            lora_config_json,
         ]
 
     if os.name == 'posix':
@@ -338,7 +343,7 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
             api_name='human_caption'
         )
 
-config_file = 'presets/lora/lora_config.json'
+
 def load_lora_config():
     with open(config_file) as f:
         return json.load(f)
@@ -422,13 +427,15 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 repeat,
                 drop_threshold,
                 preview_images_dict,
+                lora_config_json,
             ],
             outputs=[
                 train_folder,
                 images_preview,
                 info_text,
-                lora_train_data_dir,
-                lora_output_dir,
+                # lora_train_data_dir,
+                # lora_output_dir,
+                lora_config_json,
             ],
             show_progress=False,
             api_name='human_preprocess'
