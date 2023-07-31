@@ -19,12 +19,14 @@ log = setup_logging()
 PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 config_file = 'presets/lora/user_presets/lora_config.json'
+log_root = 'logs/lora'
 
 
-def on_images_uploaded(files, auto_matting):
+def on_images_uploaded(files, auto_matting, lora_config_json):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_folder = os.path.join('_workspace', current_time, 'original')
     os.makedirs(output_folder, exist_ok=True)
+    lora_config_json.update({'logging_dir': os.path.join(log_root, current_time)})
 
     # Move images to workspace
     for file in files:
@@ -54,7 +56,8 @@ def on_images_uploaded(files, auto_matting):
     return [
         output_folder,
         gr.update(value=f"`Images uploaded to: {output_folder}`"),
-        gr.update(value=config_file)  # config_file_name
+        gr.update(value=config_file),  # config_file_name
+        lora_config_json,
     ]
 
 
@@ -417,7 +420,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 drop_threshold = gr.Slider(label='Discard blurry images', value=0.0, minimum=0, maximum=1,
                                            step=0.05, visible=False)  # not used
                 pass_ratio = gr.Slider(label='Pass ratio', value=1.0, minimum=0, maximum=1, step=0.1,
-                                           info='Only this ratio of images will proceed to cropping')
+                                       info='Only this ratio of images will proceed to cropping')
 
             with gr.Row():
                 submit_images_button = gr.Button('Process images', variant='primary')
@@ -442,12 +445,14 @@ def gradio_preprocess_images_gui_tab(headless=False):
             on_images_uploaded,
             inputs=[
                 upload_images,  # files
-                auto_matting
+                auto_matting,
+                lora_config_json
             ],
             outputs=[
                 upload_folder,
                 info_text,
-                config_file_name
+                config_file_name,
+                lora_config_json
             ],
         )
 
