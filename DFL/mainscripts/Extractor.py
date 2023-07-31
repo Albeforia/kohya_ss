@@ -228,7 +228,8 @@ class ExtractSubprocessor(Subprocessor):
                     if face_type == FaceType.HEAD or face_type == FaceType.HEAD_NO_ALIGN:
                         image_height = int(image_size * 1.5)
                     face_image = cv2.warpAffine(image, image_to_face_mat, (image_size, image_height),
-                                                cv2.INTER_LANCZOS4)
+                                                cv2.INTER_LANCZOS4,
+                                                borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
                     # Random flip image for augmentation
                     random_number = np.random.rand()
                     if random_number > 0.5:
