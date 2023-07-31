@@ -15,7 +15,7 @@ lycoris_lora==1.8.0
 invisible-watermark==0.2.0
 # open clip for SDXL
 open-clip-torch==2.20.0
-opencv-python==4.7.0.68
+opencv-python
 prodigyopt==1.0
 pytorch-lightning==1.9.0
 rich==13.4.1
@@ -32,5 +32,6 @@ numexpr==2.8.4
 h5py==3.9.0
 scikit-image==0.21.0
 colorama==0.4.6
+-r Matting/requirements.txt
 # for kohya_ss library
 -e . # no_verify leave this to specify not checking this a verification stage

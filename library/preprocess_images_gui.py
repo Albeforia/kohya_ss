@@ -33,6 +33,24 @@ def on_images_uploaded(files):
         if ext in ['.png', '.jpg', '.jpeg']:
             shutil.move(file.name, output_folder)
 
+    # Matting
+    tmp_folder = f"{output_folder}_"
+    os.rename(output_folder, tmp_folder)
+    run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
+    run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
+    run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
+    run_cmd += f' "--image_path={tmp_folder}"'
+    run_cmd += f' "--save_dir={output_folder}"'
+    run_cmd += f' "--fg_estimate=True"'
+    run_cmd += f' "--background=w"'
+
+    log.info(run_cmd)
+
+    if os.name == 'posix':
+        os.system(run_cmd)
+    else:
+        subprocess.run(run_cmd)
+
     return [
         output_folder,
         gr.update(value=f"`Images uploaded to: {output_folder}`")

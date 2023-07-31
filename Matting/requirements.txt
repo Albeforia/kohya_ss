@@ -1,0 +1,6 @@
+paddlepaddle==2.5.0 --index-url https://mirror.baidu.com/pypi/simple
+paddleseg >= 2.5
+pymatting
+scikit-image
+numba
+opencv-python
