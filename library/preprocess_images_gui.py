@@ -386,7 +386,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64,
                                           visible=False)
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
-                drop_threshold = gr.Slider(label='Discard blurry images', value=0.1, minimum=0, maximum=1,
+                drop_threshold = gr.Slider(label='Discard blurry images', value=0.0, minimum=0, maximum=1,
                                            step=0.05)
 
             with gr.Row():
