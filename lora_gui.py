@@ -489,10 +489,16 @@ def train_model(
     # Get list of function parameters and values
     parameters = list(locals().items())
     global command_running
-    
-    print_only_bool = True if print_only.get('label') == 'True' else False
+
+    if not isinstance(print_only, bool):
+        print_only_bool = True if print_only.get('label') == 'True' else False
+    else:
+        print_only_bool = print_only
     log.info(f'Start training LoRA {LoRA_type} ...')
-    headless_bool = True if headless.get('label') == 'True' else False
+    if not isinstance(headless, bool):
+        headless_bool = True if headless.get('label') == 'True' else False
+    else:
+        headless_bool = headless
 
     if pretrained_model_name_or_path == '':
         output_message(

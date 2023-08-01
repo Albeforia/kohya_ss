@@ -5,13 +5,14 @@ import re
 import shutil
 import subprocess
 import time
+import traceback
 from pathlib import Path
 
 import gradio as gr
 
 import library.train_util as train_util
 from library.custom_logging import setup_logging
-from lora_gui import lora_tab
+from lora_gui import lora_tab, train_model
 
 # Set up logging
 log = setup_logging()
@@ -19,37 +20,55 @@ log = setup_logging()
 PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 config_file = 'presets/lora/user_presets/lora_config.json'
-log_root = 'logs/lora'
 
 
-def on_images_uploaded(files, auto_matting, lora_config_json):
+def get_matting_cmd(from_folder, to_folder):
+    run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
+    run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
+    run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
+    run_cmd += f' "--image_path={from_folder}"'
+    run_cmd += f' "--save_dir={to_folder}"'
+    run_cmd += f' "--fg_estimate=True"'
+    run_cmd += f' "--background=w"'  # Add white background
+
+    return run_cmd
+
+
+def on_images_uploaded(
+        files,
+        auto_matting,
+        lora_config_json,
+        api_call=False
+):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_folder = os.path.join('_workspace', current_time, 'original')
+    final_output_folder = f"{output_folder}/../output"
     os.makedirs(output_folder, exist_ok=True)
-    lora_config_json.update({'logging_dir': os.path.join(log_root, current_time)})
+    os.makedirs(final_output_folder)
+    lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
+    lora_config_json.update({'output_dir': f"{final_output_folder}"})
 
     # Move images to workspace
     for file in files:
-        _, ext = os.path.splitext(file.name)
+        filepath = file if isinstance(file, str) else file.name
+        _, ext = os.path.splitext(filepath)
         ext = ext.lower()
         if ext in ['.png', '.jpg', '.jpeg']:
-            shutil.move(file.name, output_folder)
+            shutil.move(filepath, output_folder)
 
     # Matting
     if auto_matting:
         tmp_folder = f"{output_folder}_"
         os.rename(output_folder, tmp_folder)
-        run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
-        run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
-        run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
-        run_cmd += f' "--image_path={tmp_folder}"'
-        run_cmd += f' "--save_dir={output_folder}"'
-        run_cmd += f' "--fg_estimate=True"'
-        run_cmd += f' "--background=w"'
+        run_cmd = get_matting_cmd(tmp_folder, output_folder)
 
         log.info(run_cmd)
-        if os.name == 'posix':
-            os.system(run_cmd)
+        # if os.name == 'posix':
+        #     os.system(run_cmd)
+        # else:
+        if api_call:
+            with open(f"{final_output_folder}/log.txt", 'a') as f:
+                subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
         else:
             subprocess.run(run_cmd)
 
@@ -70,11 +89,16 @@ def clear_upload_images(input_folder):
         ]
 
     dir_path = Path(input_folder)
-    for item in dir_path.iterdir():
-        if item.is_dir():
-            shutil.rmtree(item)
-        else:
-            item.unlink()
+    if dir_path.exists():
+        shutil.rmtree(dir_path)
+    dir_path = Path(f"{dir_path}_")
+    if dir_path.exists():
+        shutil.rmtree(dir_path)
+    # for item in dir_path.iterdir():
+    #     if item.is_dir():
+    #         shutil.rmtree(item)
+    #     else:
+    #         item.unlink()
     return [
         '',
         gr.update(value=None),
@@ -113,6 +137,7 @@ def process_images(
         pass_ratio,
         preview_images_dict,
         lora_config_json,
+        api_call=False,
         # progress=gr.Progress()
 ):
     if input_folder == '':
@@ -169,7 +194,6 @@ def process_images(
         images = list(Path(output_folder).glob('*'))
         preview_images_dict.update({output_folder: images})
         lora_config_json.update({'train_data_dir': f"{input_folder}/../processed"})
-        lora_config_json.update({'output_dir': f"{input_folder}/../output"})
         with open(config_file, 'w') as json_file:
             json.dump(lora_config_json, json_file)
         return [
@@ -180,21 +204,27 @@ def process_images(
             lora_config_json,
         ]
 
-    if os.name == 'posix':
-        os.system(run_cmd)
-        os.system(run_cmd2)
-        return output()
+    # if os.name == 'posix':
+    #     os.system(run_cmd)
+    #     os.system(run_cmd2)
+    #     return output()
+    # else:
+    if api_call:
+        with open(f"{lora_config_json['output_dir']}/log.txt", 'a') as f:
+            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
+            subprocess.run(run_cmd2, stdout=f, stderr=subprocess.STDOUT)
     else:
         subprocess.run(run_cmd)
         subprocess.run(run_cmd2)
-        # process = subprocess.Popen(
-        #     run_cmd,
-        #     stdout=subprocess.PIPE,
-        #     stderr=subprocess.PIPE
-        # )
-        # for _ in progress.tqdm(check_progress(), desc="Processing"):
-        #     pass
-        return output()
+
+    # process = subprocess.Popen(
+    #     run_cmd,
+    #     stdout=subprocess.PIPE,
+    #     stderr=subprocess.PIPE
+    # )
+    # for _ in progress.tqdm(check_progress(), desc="Processing"):
+    #     pass
+    return output()
 
 
 def _add_pre_postfix(
@@ -253,6 +283,7 @@ def caption_images(
         undesired_tags,
         prefix,
         postfix,
+        api_call=False,
 ):
     # Check for images_dir_input
     if train_data_dir == '':
@@ -280,8 +311,12 @@ def caption_images(
     log.info(run_cmd)
 
     # Run the command
-    if os.name == 'posix':
-        os.system(run_cmd)
+    # if os.name == 'posix':
+    #     os.system(run_cmd)
+    # else:
+    if api_call:
+        with open(f"{train_data_dir}/../output/log.txt", 'a') as f:
+            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
     else:
         subprocess.run(run_cmd)
 
@@ -364,13 +399,66 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
             ],
             outputs=[info_text],
             show_progress=False,
-            api_name='human_caption'
         )
 
 
 def load_lora_config():
     with open(config_file) as f:
         return json.load(f)
+
+
+def get_file_paths(directory):
+    file_paths = []
+    for file in os.listdir(directory):
+        full_file_path = os.path.join(directory, file)
+        if os.path.isfile(full_file_path):
+            file_paths.append(full_file_path)
+    return file_paths
+
+
+def _train_api(input_folder, model_path, trigger_words):
+    config = load_lora_config()
+    config.update({'pretrained_model_name_or_path': model_path})
+
+    try:
+        uploaded_files = get_file_paths(input_folder)
+
+        # Preprocess
+        work_folder, _, _, _ = on_images_uploaded(uploaded_files, auto_matting=True, lora_config_json=config,
+                                                  api_call=True)
+        train_folder, _, _, _ = \
+            process_images(work_folder, 'half_face', 512, 768, 10, 0, 1, {}, config, api_call=True)
+        process_images(work_folder, 'head', 512, 768, 10, 0, 1, {}, config, api_call=True)
+        # ...
+
+        # Caption
+        caption_images(
+            train_folder,
+            0.4,
+            0.4,
+            'SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
+            '',
+            trigger_words,
+            '',
+            api_call=True
+        )
+
+        log.info(config)
+        # Train
+        config.pop('stop_text_encoder_training')
+        config['stop_text_encoder_training_pct'] = 0  # Not yet supported
+        train_model(headless=True, print_only=True, **config)
+        with open(f"{config['output_dir']}/log.txt", 'a') as f:
+            f.write('SUCCESS')
+
+        return os.path.abspath(config['output_dir'])
+    except Exception as e:
+        stack = traceback.format_exc()
+        print(stack)
+        with open(f"{config['output_dir']}/log.txt", 'a') as f:
+            f.write(stack)
+
+        return os.path.abspath(config['output_dir'])
 
 
 def gradio_preprocess_images_gui_tab(headless=False):
@@ -478,7 +566,6 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 lora_config_json,
             ],
             show_progress=False,
-            api_name='human_preprocess'
         )
 
         clear_upload_button.click(
@@ -499,4 +586,17 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 info_text,
             ],
             show_progress=False
+        )
+
+        # API
+        api_only_image_path = gr.Textbox('', visible=False)
+        api_only_model_path = gr.Textbox('', visible=False)
+        api_only_output_path = gr.Textbox('', visible=False)
+        api_only_trigger_words = gr.Textbox('', visible=False)
+        api_only_train = gr.Button('', visible=False)
+        api_only_train.click(
+            _train_api,
+            inputs=[api_only_image_path, api_only_model_path, api_only_trigger_words],
+            outputs=[api_only_output_path],
+            api_name='train_lora'
         )
