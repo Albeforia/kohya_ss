@@ -492,10 +492,13 @@ def gradio_preprocess_images_gui_tab(headless=False):
                     label='Face detection type',
                     choices=[
                         'half_face',
+                        'half_face_no_align',
                         'midfull_face',
+                        'midfull_face_no_align',
                         'full_face',
                         'full_face_no_align',
                         'whole_face',
+                        'whole_face_no_align',
                         'head',
                         'head_no_align',
                     ],

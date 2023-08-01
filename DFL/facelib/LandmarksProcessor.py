@@ -207,10 +207,13 @@ landmarks_68_3D = np.array( [
 
 FaceType_to_padding_remove_align = {
     FaceType.HALF: (0.0, False),
+    FaceType.HALF_NO_ALIGN: (0.0, True),
     FaceType.MID_FULL: (0.0675, False),
+    FaceType.MID_FULL_NO_ALIGN: (0.0675, True),
     FaceType.FULL: (0.2109375, False),
     FaceType.FULL_NO_ALIGN: (0.2109375, True),
     FaceType.WHOLE_FACE: (0.40, False),
+    FaceType.WHOLE_FACE_NO_ALIGN: (0.40, True),
     FaceType.HEAD: (0.70, False),
     FaceType.HEAD_NO_ALIGN: (0.70, True),
 }
