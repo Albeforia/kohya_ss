@@ -9,11 +9,16 @@ class CommandExecutor:
     def __init__(self):
         self.process = None
 
-    def execute_command(self, run_cmd):
+    def execute_command(self, run_cmd, log_dir=None):
         if self.process and self.process.poll() is None:
             log.info("The command is already running. Please wait for it to finish.")
         else:
-            self.process = subprocess.Popen(run_cmd, shell=True)
+            if log_dir is None:
+                self.process = subprocess.Popen(run_cmd, shell=True)
+            else:
+                # HACK: If we have a log file, this is called via API, must block the call
+                with open(f"{log_dir}/log.txt", 'a') as f:
+                    self.process = subprocess.run(run_cmd, shell=True, stdout=f, stderr=subprocess.STDOUT)
 
     def kill_command(self):
         if self.process and self.process.poll() is None:

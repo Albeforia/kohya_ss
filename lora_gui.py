@@ -988,7 +988,7 @@ def train_model(
         
         log.info(run_cmd)
         # Run the command
-        executor.execute_command(run_cmd=run_cmd)
+        executor.execute_command(run_cmd=run_cmd, log_dir=output_dir if headless_bool else None)
 
         # # check if output_dir/last is a folder... therefore it is a diffuser model
         # last_dir = pathlib.Path(f'{output_dir}/{output_name}')

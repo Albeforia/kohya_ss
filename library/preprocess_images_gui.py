@@ -447,7 +447,7 @@ def _train_api(input_folder, model_path, trigger_words):
         # Train
         config.pop('stop_text_encoder_training')
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
-        train_model(headless=True, print_only=True, **config)
+        train_model(headless=True, print_only=False, **config)
         with open(f"{config['output_dir']}/log.txt", 'a') as f:
             f.write('SUCCESS')
 
