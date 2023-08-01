@@ -876,7 +876,7 @@ def final_process(input_path, img_list, trash_img_list):
     import uuid
 
     def get_first_elem_or_self(var):
-        if isinstance(var, tuple):
+        if isinstance(var, list):
             return var[0]
         else:
             return var

@@ -505,8 +505,8 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 target_height = gr.Slider(label='Output height', value=768, minimum=256, maximum=2048, step=64,
                                           visible=False)
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
-                drop_threshold = gr.Slider(label='Discard blurry images', value=0.0, minimum=0, maximum=1,
-                                           step=0.05, visible=False)  # not used
+                drop_threshold = gr.Slider(label='Enhance blurry faces', value=0.0, minimum=0, maximum=1, step=0.05,
+                                           info='Recommend 0.3 for head; 0.2 for full face', visible=False)
                 pass_ratio = gr.Slider(label='Pass ratio', value=1.0, minimum=0, maximum=1, step=0.1,
                                        info='Only this ratio of images will proceed to cropping')
 
