@@ -65,6 +65,9 @@ else
     fi
 fi
 
+# Set the environment variable
+export LD_LIBRARY_PATH=./venv/lib
+
 # Validate the requirements and run the script if successful
 if python3 "$SCRIPT_DIR/setup/validate_requirements.py" -r "$REQUIREMENTS_FILE"; then
     python3 "$SCRIPT_DIR/kohya_gui.py" "$@"
