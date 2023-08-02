@@ -73,9 +73,9 @@ def on_images_uploaded(
         # else:
         if api_call:
             with open(f"{final_output_folder}/log.txt", 'a') as f:
-                subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
+                subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
         else:
-            subprocess.run(run_cmd)
+            subprocess.run(run_cmd, shell=True)
 
     return [
         output_folder,
@@ -219,13 +219,13 @@ def process_images(
     # else:
     if api_call:
         with open(f"{lora_config_json['output_dir']}/log.txt", 'a') as f:
-            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
-            subprocess.run(run_cmd2, stdout=f, stderr=subprocess.STDOUT)
-            subprocess.run(run_cmd3, stdout=f, stderr=subprocess.STDOUT)
+            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
+            subprocess.run(run_cmd2, stdout=f, stderr=subprocess.STDOUT, shell=True)
+            subprocess.run(run_cmd3, stdout=f, stderr=subprocess.STDOUT, shell=True)
     else:
-        subprocess.run(run_cmd)
-        subprocess.run(run_cmd2)
-        subprocess.run(run_cmd3)
+        subprocess.run(run_cmd, shell=True)
+        subprocess.run(run_cmd2, shell=True)
+        subprocess.run(run_cmd3, shell=True)
 
     # process = subprocess.Popen(
     #     run_cmd,
@@ -326,9 +326,9 @@ def caption_images(
     # else:
     if api_call:
         with open(f"{train_data_dir}/../output/log.txt", 'a') as f:
-            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
+            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
     else:
-        subprocess.run(run_cmd)
+        subprocess.run(run_cmd, shell=True)
 
     # Add prefix and postfix
     _add_pre_postfix(
