@@ -45,8 +45,13 @@ def on_images_uploaded(
     final_output_folder = f"{output_folder}/../output"
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(final_output_folder)
-    lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
+
+    # Update folders for lora config
+    lora_config_json.update({'train_data_dir': f"{output_folder}/../processed"})
     lora_config_json.update({'output_dir': f"{final_output_folder}"})
+    lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
+    with open(config_file, 'w') as json_file:
+        json.dump(lora_config_json, json_file)  # save to file
 
     # Move images to workspace
     for file in files:
@@ -145,7 +150,6 @@ def process_images(
             "",
             gr.update(value=[], visible=False),  # hide Gallery
             gr.update(value=f"`Please upload images first!`"),
-            lora_config_json,
         ]
 
     output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
@@ -193,15 +197,11 @@ def process_images(
     def output():
         images = list(Path(output_folder).glob('*'))
         preview_images_dict.update({output_folder: images})
-        lora_config_json.update({'train_data_dir': f"{input_folder}/../processed"})
-        with open(config_file, 'w') as json_file:
-            json.dump(lora_config_json, json_file)
         return [
             f"{input_folder}/../processed",
             # show Gallery
             gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
             gr.update(value=f"`Face detection done, {face_type}`"),
-            lora_config_json,
         ]
 
     # if os.name == 'posix':
@@ -404,7 +404,12 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
 
 def load_lora_config():
     with open(config_file) as f:
-        return json.load(f)
+        config = json.load(f)
+        config['save_state'] = False
+        config['save_every_n_steps'] = 0
+        config['save_last_n_steps'] = 0
+        config['save_last_n_steps_state'] = 0
+        return config
 
 
 def get_file_paths(directory):
@@ -529,7 +534,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 lora_logging_dir,
                 # new
                 config_file_name,
-            ) = lora_tab(headless=True)
+            ) = lora_tab(headless=headless)
 
         # Event listeners
         upload_images.upload(
@@ -566,7 +571,6 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 info_text,
                 # lora_train_data_dir,
                 # lora_output_dir,
-                lora_config_json,
             ],
             show_progress=False,
         )

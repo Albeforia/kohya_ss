@@ -76,6 +76,7 @@ V2_STABLE_DIFFUSION_PATH = "stabilityai/stable-diffusion-2"  # ここからtoken
 # checkpointファイル名
 EPOCH_STATE_NAME = "{}-{:06d}-state"
 EPOCH_FILE_NAME = "{}-{:06d}"
+EPOCH_FILE_NAME_CUSTOM = "{}_epoch{:03d}_loss{:.3f}"
 EPOCH_DIFFUSERS_DIR_NAME = "{}-{:06d}"
 LAST_STATE_NAME = "{}-state"
 DEFAULT_EPOCH_NAME = "epoch"
@@ -3781,9 +3782,12 @@ def default_if_none(value, default):
     return default if value is None else value
 
 
-def get_epoch_ckpt_name(args: argparse.Namespace, ext: str, epoch_no: int):
+def get_epoch_ckpt_name(args: argparse.Namespace, ext: str, epoch_no: int, loss=None):
     model_name = default_if_none(args.output_name, DEFAULT_EPOCH_NAME)
-    return EPOCH_FILE_NAME.format(model_name, epoch_no) + ext
+    if loss is None:
+        return EPOCH_FILE_NAME.format(model_name, epoch_no) + ext
+    else:
+        return EPOCH_FILE_NAME_CUSTOM.format(model_name, epoch_no, loss) + ext
 
 
 def get_step_ckpt_name(args: argparse.Namespace, ext: str, step_no: int):

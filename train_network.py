@@ -865,7 +865,7 @@ class NetworkTrainer:
             if args.save_every_n_epochs is not None:
                 saving = (epoch + 1) % args.save_every_n_epochs == 0 and (epoch + 1) < num_train_epochs
                 if is_main_process and saving:
-                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1)
+                    ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, epoch + 1, loss_total / len(loss_list))
                     save_model(ckpt_name, accelerator.unwrap_model(network), global_step, epoch + 1)
 
                     remove_epoch_no = train_util.get_remove_epoch_no(args, epoch + 1)
@@ -892,7 +892,8 @@ class NetworkTrainer:
             train_util.save_state_on_train_end(args, accelerator)
 
         if is_main_process:
-            ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+            # ckpt_name = train_util.get_last_ckpt_name(args, "." + args.save_model_as)
+            ckpt_name = train_util.get_epoch_ckpt_name(args, "." + args.save_model_as, num_train_epochs, loss_total / len(loss_list))
             save_model(ckpt_name, network, global_step, num_train_epochs, force_sync_upload=True)
 
             print("model saved.")
