@@ -229,32 +229,32 @@ class nn():
         for device in devices:
             io.log_info (f"  [{device.index}] : {device.name}")
 
-        io.log_info ("")
+        # io.log_info ("")
+        #
+        # while True:
+        #     try:
+        #         if choose_only_one:
+        #             choosed_idxs = io.input_str("Which GPU index to choose?", best_device_indexes)
+        #         else:
+        #             choosed_idxs = io.input_str("Which GPU indexes to choose?", best_device_indexes)
+        #
+        #         if allow_cpu and choosed_idxs.lower() == "cpu":
+        #             choosed_idxs = []
+        #             break
+        #
+        #         choosed_idxs = [ int(x) for x in choosed_idxs.split(',') ]
+        #
+        #         if choose_only_one:
+        #             if len(choosed_idxs) == 1:
+        #                 break
+        #         else:
+        #             if all( [idx in all_devices_indexes for idx in choosed_idxs] ):
+        #                 break
+        #     except:
+        #         pass
+        # io.log_info ("")
 
-        while True:
-            try:
-                if choose_only_one:
-                    choosed_idxs = io.input_str("Which GPU index to choose?", best_device_indexes)
-                else:
-                    choosed_idxs = io.input_str("Which GPU indexes to choose?", best_device_indexes)
-
-                if allow_cpu and choosed_idxs.lower() == "cpu":
-                    choosed_idxs = []
-                    break
-
-                choosed_idxs = [ int(x) for x in choosed_idxs.split(',') ]
-
-                if choose_only_one:
-                    if len(choosed_idxs) == 1:
-                        break
-                else:
-                    if all( [idx in all_devices_indexes for idx in choosed_idxs] ):
-                        break
-            except:
-                pass
-        io.log_info ("")
-
-        return choosed_idxs
+        return [ devices.get_best_device().index ]
 
     class DeviceConfig():
         @staticmethod
