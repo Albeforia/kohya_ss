@@ -17,13 +17,13 @@ from lora_gui import lora_tab, train_model
 # Set up logging
 log = setup_logging()
 
-PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
+# PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 config_file = 'presets/lora/user_presets/lora_config.json'
 
 
 def get_matting_cmd(from_folder, to_folder):
-    run_cmd = f'{PYTHON} "{os.path.join("Matting/tools", "predict.py")}"'
+    run_cmd = f'accelerate launch "{os.path.join("Matting/tools", "predict.py")}"'
     run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
     run_cmd += f' "--model_path={os.path.join("Matting/pretrained_models", "ppmattingv2-stdc1-human_512.pdparams")}"'
     run_cmd += f' "--image_path={from_folder}"'
@@ -157,7 +157,7 @@ def process_images(
     log.info(f'Processing images in {input_folder}...')
     # progress(0.0, desc="Start Processing")
 
-    run_cmd = f'{PYTHON} "{os.path.join("DFL/mainscripts", "Extractor.py")}"'
+    run_cmd = f'accelerate launch "{os.path.join("DFL/mainscripts", "Extractor.py")}"'
     run_cmd += f' "{input_folder}"'
     run_cmd += f' "{output_folder}"'
     run_cmd += f' "{face_type}"'
@@ -168,7 +168,7 @@ def process_images(
 
     log.info(run_cmd)
 
-    run_cmd2 = f'{PYTHON} "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
+    run_cmd2 = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
     run_cmd2 += f' "{output_folder}"'
     run_cmd2 += f' "blur"'  # Sort method
     run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
@@ -176,7 +176,7 @@ def process_images(
     # Deblur
     trash_path = f"{input_folder}/../{repeat}_{face_type}_trash"
     fixed_path = f"{input_folder}/../{repeat}_{face_type}_fix"
-    run_cmd3 = f'{PYTHON} "{os.path.join("DeblurGANv2", "predict.py")}"'
+    run_cmd3 = f'accelerate launch "{os.path.join("DeblurGANv2", "predict.py")}"'
     run_cmd3 += f' "{trash_path}"'
     run_cmd3 += f' "{fixed_path}"'
     run_cmd3 += f' "{output_folder}"'
