@@ -437,6 +437,16 @@ def get_file_paths(directory):
     return file_paths
 
 
+def show_lora_files(lora_config_json):
+    output_dir = lora_config_json['output_dir']
+    files = get_file_paths(output_dir)
+    filtered_files = []
+    for f in files:
+        if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
+            filtered_files.append(os.path.abspath(f))
+    return gr.update(value=filtered_files)
+
+
 def _train_api(input_folder, model_path, trigger_words):
     config = load_lora_config()
     config.update({'pretrained_model_name_or_path': model_path})
@@ -552,6 +562,12 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 config_file_name,
             ) = lora_tab(headless=headless)
 
+        with gr.Accordion('[Step 4] Results', open=False):
+            show_files = gr.Button('Show trained LoRA files')
+            lora_files = gr.File(
+                interactive=False
+            )
+
         # Event listeners
         upload_images.upload(
             on_images_uploaded,
@@ -609,6 +625,12 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 info_text,
             ],
             show_progress=False
+        )
+
+        show_files.click(
+            show_lora_files,
+            inputs=[lora_config_json],
+            outputs=[lora_files]
         )
 
         # API
