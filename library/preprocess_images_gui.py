@@ -392,6 +392,7 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
                 minimum=0,
                 maximum=1,
                 step=0.05,
+                visible=False
             )
 
         caption_button = gr.Button('Caption images', variant='primary')
@@ -540,7 +541,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                                           visible=False)
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
                 drop_threshold = gr.Slider(label='Enhance blurry faces', value=0.0, minimum=0, maximum=1, step=0.05,
-                                           info='Recommend 0.3 for head; 0.2 for full face')
+                                           info='Recommend 0.3 for head; 0.2 for full face', visible=False)
                 pass_ratio = gr.Slider(label='Pass ratio', value=1.0, minimum=0, maximum=1, step=0.1,
                                        info='Only this ratio of images will proceed to cropping')
 
