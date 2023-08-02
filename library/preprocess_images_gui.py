@@ -173,6 +173,14 @@ def process_images(
     run_cmd2 += f' "blur"'  # Sort method
     run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
 
+    # Deblur
+    trash_path = f"{input_folder}/../{repeat}_{face_type}_trash"
+    fixed_path = f"{input_folder}/../{repeat}_{face_type}_fix"
+    run_cmd3 = f'{PYTHON} "{os.path.join("DeblurGANv2", "predict.py")}"'
+    run_cmd3 += f' "{trash_path}"'
+    run_cmd3 += f' "{fixed_path}"'
+    run_cmd3 += f' "{output_folder}"'
+
     def check_progress(process):
         count = 0
         while True:
@@ -213,9 +221,11 @@ def process_images(
         with open(f"{lora_config_json['output_dir']}/log.txt", 'a') as f:
             subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT)
             subprocess.run(run_cmd2, stdout=f, stderr=subprocess.STDOUT)
+            subprocess.run(run_cmd3, stdout=f, stderr=subprocess.STDOUT)
     else:
         subprocess.run(run_cmd)
         subprocess.run(run_cmd2)
+        subprocess.run(run_cmd3)
 
     # process = subprocess.Popen(
     #     run_cmd,
@@ -520,7 +530,7 @@ def gradio_preprocess_images_gui_tab(headless=False):
                                           visible=False)
                 repeat = gr.Slider(label='Repeat per image when training', value=6, minimum=2, maximum=20, step=1)
                 drop_threshold = gr.Slider(label='Enhance blurry faces', value=0.0, minimum=0, maximum=1, step=0.05,
-                                           info='Recommend 0.3 for head; 0.2 for full face', visible=False)
+                                           info='Recommend 0.3 for head; 0.2 for full face')
                 pass_ratio = gr.Slider(label='Pass ratio', value=1.0, minimum=0, maximum=1, step=0.1,
                                        info='Only this ratio of images will proceed to cropping')
 
