@@ -445,7 +445,7 @@ def show_lora_files(lora_config_json):
     for f in files:
         if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
             filtered_files.append(os.path.abspath(f))
-    return gr.update(value=filtered_files)
+    return gr.update(value=filtered_files, visible=True)
 
 
 def _train_api(input_folder, model_path, trigger_words):
@@ -501,10 +501,6 @@ def gradio_preprocess_images_gui_tab(headless=False):
 
         info_text = gr.Markdown()
 
-        with gr.Row():
-            clear_upload_button = gr.Button('Clear uploaded images', variant='stop', scale=0)
-            clear_train_button = gr.Button('Clear training folder', variant='stop', scale=0)
-
         with gr.Accordion('[Step 0] Select the image folder to upload'):
             with gr.Row(equal_height=False):
                 upload_images = gr.File(
@@ -513,7 +509,10 @@ def gradio_preprocess_images_gui_tab(headless=False):
                     # file_types=['image'],
                     sacle=2
                 )
-                auto_matting = gr.Checkbox(value=True, label='Auto matting', scale=0)
+                with gr.Column(scale=0):
+                    auto_matting = gr.Checkbox(value=True, label='Auto matting')
+                    clear_upload_button = gr.Button('Clear uploaded images', variant='stop')
+                    clear_train_button = gr.Button('Clear training folder', variant='stop')
 
         with gr.Row():
             images_preview = gr.Gallery(preview=True, columns=8, visible=False, scale=2)
@@ -566,7 +565,8 @@ def gradio_preprocess_images_gui_tab(headless=False):
         with gr.Accordion('[Step 4] Results', open=False):
             show_files = gr.Button('Show trained LoRA files')
             lora_files = gr.File(
-                interactive=False
+                interactive=False,
+                visible=False
             )
 
         # Event listeners
