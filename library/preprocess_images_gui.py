@@ -409,6 +409,12 @@ def load_lora_config():
         config['save_every_n_steps'] = 0
         config['save_last_n_steps'] = 0
         config['save_last_n_steps_state'] = 0
+
+        config['sample_every_n_epochs'] = 1
+        config['sample_every_n_steps'] = 0
+        config[
+            'sample_prompts'] = '(masterpiece, best quality), 1girl, solo, close-up, --n lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512 --h 512 --l 7 --s 24  --d 1337'
+        config['sample_sampler'] = 'euler'
         return config
 
 
