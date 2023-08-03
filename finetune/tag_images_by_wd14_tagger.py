@@ -219,9 +219,12 @@ def main(args):
 
     if args.frequency_tags:
         sorted_tags = sorted(tag_freq.items(), key=lambda x: x[1], reverse=True)
-        print("\nTag frequencies:")
-        for tag, freq in sorted_tags:
-            print(f"{tag}: {freq}")
+        # print("\nTag frequencies:")
+        # for tag, freq in sorted_tags:
+        #     print(f"{tag}: {freq}")
+        with open(f'{args.train_data_dir}/../output/tags.txt', 'w') as f:
+            for tag in sorted_tags:
+                f.write(f'{tag[0]}: {tag[1]}\n')
 
     print("done!")
 
