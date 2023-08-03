@@ -16,6 +16,7 @@ import gradio as gr
 import library.train_util as train_util
 from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
+from library.generate_images_gui import gradio_generate_images_gui
 
 # Set up logging
 log = setup_logging()
@@ -523,8 +524,6 @@ def _train_api(input_folder, model_path, trigger_words):
         config.pop('stop_text_encoder_training', None)
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
-        with open(f"{config['output_dir']}/log.txt", 'a') as f:
-            f.write('SUCCESS')
 
         return os.path.abspath(config['output_dir'])
     except Exception as e:
@@ -611,6 +610,8 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 interactive=False,
                 visible=False
             )
+
+        gradio_generate_images_gui(headless=headless)
 
         # Event listeners
         upload_images.upload(

@@ -19,7 +19,9 @@ class CommandExecutor:
                 # HACK: If we have a log file, this is called via API, must block the call
                 with open(f"{log_dir}/log.txt", 'a') as f:
                     self.process = subprocess.Popen(run_cmd, shell=True, stdout=f, stderr=subprocess.STDOUT)
-                    self.process.wait()
+                    exit_code = self.process.wait()
+                    if exit_code == 0:
+                        f.write('SUCCESS')
 
     def kill_command(self):
         if self.process and self.process.poll() is None:
