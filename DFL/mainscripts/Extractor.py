@@ -253,6 +253,13 @@ class ExtractSubprocessor(Subprocessor):
                     landmarks_area = mathlib.polygon_area(landmarks_bbox[:, 0].astype(np.float32),
                                                           landmarks_bbox[:, 1].astype(np.float32))
 
+                    rect_width = rect[2] - rect[0]
+                    rect_height = rect[3] - rect[1]
+                    max_ratio = max([rect_width / image.shape[0], rect_height / image.shape[1]])
+                    if not data.manual and (
+                            face_type == FaceType.HEAD or face_type == FaceType.HEAD_NO_ALIGN) and max_ratio > 0.8:
+                        continue
+
                     if not data.manual and face_type <= FaceType.FULL_NO_ALIGN and landmarks_area > 4 * rect_area:  # get rid of faces which umeyama-landmark-area > 4*detector-rect-area
                         continue
 
