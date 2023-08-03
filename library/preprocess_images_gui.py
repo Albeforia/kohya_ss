@@ -6,6 +6,9 @@ import shutil
 import subprocess
 import time
 import traceback
+import random
+import math
+from PIL import Image
 from pathlib import Path
 
 import gradio as gr
@@ -285,6 +288,25 @@ def _add_pre_postfix(
                 )
 
 
+def random_pick_image_and_flip(train_data_dir):
+    flip_folder = '10_flip'
+    tmp_dir = f'{train_data_dir}/../{flip_folder}'
+    os.makedirs(tmp_dir, exist_ok=True)
+
+    for subdir, dirs, files in os.walk(train_data_dir):
+        for file in random.sample(files, k=math.ceil(len(files) * 0.2)):
+            if file.lower().endswith(('.png', '.jpg', '.jpeg')):
+                shutil.copy(os.path.join(subdir, file), tmp_dir)
+
+    for file_name in os.listdir(tmp_dir):
+        image_path = os.path.join(tmp_dir, file_name)
+        img = Image.open(image_path)
+        img_flipped = img.transpose(Image.FLIP_LEFT_RIGHT)
+        img_flipped.save(image_path)
+
+    shutil.move(tmp_dir, f'{train_data_dir}/{flip_folder}')
+
+
 def caption_images(
         train_data_dir,
         general_threshold,
@@ -319,6 +341,8 @@ def caption_images(
     run_cmd += f' "{train_data_dir}"'
 
     log.info(run_cmd)
+
+    random_pick_image_and_flip(train_data_dir)
 
     # Run the command
     # if os.name == 'posix':
