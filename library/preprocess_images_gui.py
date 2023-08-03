@@ -37,6 +37,22 @@ def get_matting_cmd(from_folder, to_folder):
     return run_cmd
 
 
+def on_images_uploaded_simple(files):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', 'temp', current_time)
+    os.makedirs(output_folder)
+
+    # Move images to workspace
+    for file in files:
+        filepath = file if isinstance(file, str) else file.name
+        _, ext = os.path.splitext(filepath)
+        ext = ext.lower()
+        if ext in ['.png', '.jpg', '.jpeg']:
+            shutil.move(filepath, output_folder)
+
+    return output_folder
+
+
 def on_images_uploaded(
         files,
         auto_matting,
@@ -462,14 +478,17 @@ def get_file_paths(directory):
     return file_paths
 
 
-def show_lora_files(lora_config_json):
-    output_dir = lora_config_json['output_dir']
+def show_lora_files_(output_dir, file_postfix):
     files = get_file_paths(output_dir)
     filtered_files = []
     for f in files:
-        if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
+        if os.path.splitext(f)[1] == '.' + file_postfix:
             filtered_files.append(os.path.abspath(f))
     return gr.update(value=filtered_files, visible=True)
+
+
+def show_lora_files(lora_config_json):
+    return show_lora_files_(lora_config_json['output_dir'], lora_config_json['save_model_as'])
 
 
 def _train_api(input_folder, model_path, trigger_words):
@@ -482,18 +501,17 @@ def _train_api(input_folder, model_path, trigger_words):
         # Preprocess
         work_folder, _, _, _ = on_images_uploaded(uploaded_files, auto_matting=True, lora_config_json=config,
                                                   api_call=True)
-        train_folder, _, _, _ = \
-            process_images(work_folder, 'half_face', 512, 768, 10, 0, 1, {}, config, api_call=True)
-        process_images(work_folder, 'head', 512, 768, 10, 0, 1, {}, config, api_call=True)
-        # ...
+        train_folder, _, _ = \
+            process_images(work_folder, 'midfull_face', 512, 512, 4, 0, 1, {}, config, api_call=True)
+        process_images(work_folder, 'whole_face_no_align', 512, 512, 8, 0, 1, {}, config, api_call=True)
+        process_images(work_folder, 'head_no_align', 512, 768, 10, 0, 1, {}, config, api_call=True)
 
         # Caption
         caption_images(
             train_folder,
-            0.4,
-            0.4,
+            0.5, 0.4,
             'SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
-            '',
+            'long hair, brown hair, black hair, brown eyes, black eyes, lips, teeth, nose, portrait, forehead',
             trigger_words,
             '',
             api_call=True
@@ -501,7 +519,7 @@ def _train_api(input_folder, model_path, trigger_words):
 
         log.info(config)
         # Train
-        config.pop('stop_text_encoder_training')
+        config.pop('stop_text_encoder_training', None)
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
         with open(f"{config['output_dir']}/log.txt", 'a') as f:
@@ -669,4 +687,56 @@ def gradio_preprocess_images_gui_tab(headless=False):
             inputs=[api_only_image_path, api_only_model_path, api_only_trigger_words],
             outputs=[api_only_output_path],
             api_name='train_lora'
+        )
+
+    with gr.Tab('一键人像训练'):
+        upload_folder = gr.Textbox(visible=False)
+        output_folder = gr.Textbox(visible=False)
+        lora_postfix = gr.Textbox('safetensors', visible=False)
+
+        with gr.Accordion('Select the image folder to upload'):
+            with gr.Row(equal_height=False):
+                upload_images = gr.File(
+                    show_label=False,
+                    file_count='directory',
+                    # file_types=['image'],
+                    # sacle=2
+                )
+            model_path = gr.Textbox(label='底模路径（必填）')
+            trigger_words = gr.Textbox(label='触发词（必填）')
+            train_button = gr.Button('开始训练', variant='primary')
+
+        with gr.Accordion('Results', open=False):
+            show_files = gr.Button('刷新LoRA文件')
+            lora_files = gr.File(
+                interactive=False,
+                visible=False
+            )
+
+        upload_images.upload(
+            on_images_uploaded_simple,
+            inputs=[
+                upload_images,  # files
+            ],
+            outputs=[
+                upload_folder,
+            ],
+        )
+
+        train_button.click(
+            _train_api,
+            inputs=[
+                upload_folder,
+                model_path,
+                trigger_words,
+            ],
+            outputs=[
+                output_folder
+            ]
+        )
+
+        show_files.click(
+            show_lora_files_,
+            inputs=[output_folder, lora_postfix],
+            outputs=[lora_files]
         )
