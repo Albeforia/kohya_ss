@@ -84,6 +84,7 @@ def on_images_uploaded(
     if auto_matting:
         tmp_folder = f"{output_folder}_"
         os.rename(output_folder, tmp_folder)
+        os.makedirs(output_folder, exist_ok=True)
         run_cmd = get_matting_cmd(tmp_folder, output_folder)
 
         log.info(run_cmd)
