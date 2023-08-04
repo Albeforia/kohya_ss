@@ -312,6 +312,9 @@ def random_pick_image_and_flip(train_data_dir):
     os.makedirs(tmp_dir, exist_ok=True)
 
     for subdir, dirs, files in os.walk(train_data_dir):
+        # skip 'head' dataset
+        if 'head' in subdir:
+            continue
         for file in random.sample(files, k=math.ceil(len(files) * 0.2)):
             if file.lower().endswith(('.png', '.jpg', '.jpeg')):
                 shutil.copy(os.path.join(subdir, file), tmp_dir)
