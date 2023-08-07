@@ -507,8 +507,8 @@ def _train_api(input_folder, model_path, trigger_words):
         work_folder, _, _, _ = on_images_uploaded(uploaded_files, auto_matting=True, lora_config_json=config,
                                                   api_call=True)
         train_folder, _, _ = \
-            process_images(work_folder, 'midfull_face', 512, 512, 4, 0, 1, {}, config, api_call=True)
-        process_images(work_folder, 'whole_face_no_align', 512, 512, 8, 0, 1, {}, config, api_call=True)
+            process_images(work_folder, 'midfull_face', 512, 512, 10, 0, 1, {}, config, api_call=True)
+        process_images(work_folder, 'whole_face', 512, 512, 20, 0, 1, {}, config, api_call=True)
         process_images(work_folder, 'head_no_align', 512, 768, 10, 0, 1, {}, config, api_call=True)
 
         # Caption
