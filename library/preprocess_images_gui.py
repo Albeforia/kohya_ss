@@ -457,7 +457,7 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
         )
 
 
-def load_lora_config():
+def load_lora_config(use_wandb=True):
     with open(config_file) as f:
         config = json.load(f)
         config['save_state'] = False
@@ -468,8 +468,15 @@ def load_lora_config():
         config['sample_every_n_epochs'] = 1
         config['sample_every_n_steps'] = 0
         config[
-            'sample_prompts'] = '(masterpiece, best quality), 1girl, solo, close-up, --n lowres, bad anatomy, bad hands, text, error, missing fingers, extra digit, fewer digits, cropped, worst quality, low quality, normal quality, jpeg artifacts,signature, watermark, username, blurry,  --w 512 --h 512 --l 7 --s 24  --d 1337'
+            'sample_prompts'] = '(masterpiece, best quality), 1girl, solo, close-up, --n (worst quality, low quality:2), cropped, lowres, watermark,  --w 512 --h 512 --l 7 --s 24  --d 1337'
         config['sample_sampler'] = 'euler'
+
+        if use_wandb:
+            config['use_wandb'] = True
+            config['wandb_api_key'] = '2b6dc47b76cf7235a360b3bcaa8ed1cd0e902969'
+        else:
+            config['use_wandb'] = False
+            config['wandb_api_key'] = ''
         return config
 
 
@@ -496,7 +503,7 @@ def show_lora_files(lora_config_json):
 
 
 def _train_api(input_folder, model_path, trigger_words):
-    config = load_lora_config()
+    config = load_lora_config(use_wandb=False)
     config.update({'pretrained_model_name_or_path': model_path})
 
     try:
