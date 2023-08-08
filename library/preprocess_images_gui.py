@@ -16,7 +16,6 @@ import gradio as gr
 import library.train_util as train_util
 from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
-from library.generate_images_gui import gradio_generate_images_gui
 
 # Set up logging
 log = setup_logging()
@@ -613,8 +612,6 @@ def gradio_preprocess_images_gui_tab(headless=False):
                 interactive=False,
                 visible=False
             )
-
-        gradio_generate_images_gui(headless=headless)
 
         # Event listeners
         upload_images.upload(
