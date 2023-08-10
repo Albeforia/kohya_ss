@@ -28,7 +28,8 @@ templates_root = 'LightTemplates/Images'
 def get_templates():
     if not os.path.exists(templates_root):
         return []
-    return [name for name in os.listdir(templates_root) if os.path.isdir(os.path.join(templates_root, name))]
+    l = [name for name in os.listdir(templates_root) if os.path.isdir(os.path.join(templates_root, name))]
+    return sorted(l)
 
 
 def on_template_select(evt: gr.SelectData):
