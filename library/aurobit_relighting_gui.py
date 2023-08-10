@@ -59,7 +59,7 @@ def composite_image(foreground_path, background_path):
     new_height = foreground.height
     new_width = int(new_height * background.width / background.height)
 
-    background = background.resize((new_width, new_height), Image.ANTIALIAS)
+    background = background.resize((new_width, new_height), Image.LANCZOS)
 
     left = round((background.width - foreground.width) / 2)
     right = left + foreground.width
