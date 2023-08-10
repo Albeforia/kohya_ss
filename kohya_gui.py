@@ -7,7 +7,8 @@ from textual_inversion_gui import ti_tab
 from library.utilities import utilities_tab
 from lora_gui import lora_tab
 from library.class_lora_tab import LoRATools
-from library.preprocess_images_gui import gradio_preprocess_images_gui_tab
+from library.aurobit_gui import gradio_aurobit_gui_tab
+from library.aurobit_relighting_gui import gradio_aurobit_relighting_gui_tab
 
 import os
 from library.custom_logging import setup_logging
@@ -41,7 +42,8 @@ def UI(**kwargs):
 
     with interface:
         with gr.Tab('Aurobit'):
-            gradio_preprocess_images_gui_tab(headless=headless)
+            gradio_aurobit_gui_tab(headless=headless)
+            gradio_aurobit_relighting_gui_tab(headless=headless)
         with gr.Tab('Dreambooth'):
             (
                 train_data_dir_input,
