@@ -544,7 +544,7 @@ def _train_api(input_folder, model_path, trigger_words):
         return os.path.abspath(config['output_dir'])
 
 
-def gradio_preprocess_images_gui_tab(headless=False):
+def gradio_train_human_gui_tab(headless=False):
     with gr.Tab('人像训练'):
         upload_folder = gr.Textbox(visible=False)
         train_folder = gr.Textbox(visible=False)
