@@ -17,6 +17,7 @@ import library.train_util as train_util
 from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
 from library.aurobit_face_utils import gather_face_info
+from library.aurobit_face_verification_gui import gradio_aurobit_face_verify_gui_tab
 
 # Set up logging
 log = setup_logging()
@@ -465,7 +466,6 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
                 postfix,
             ],
             outputs=[info_text],
-            show_progress=False,
         )
 
 
@@ -678,7 +678,6 @@ def gradio_train_human_gui_tab(headless=False):
                 # lora_train_data_dir,
                 # lora_output_dir,
             ],
-            show_progress=False,
         )
 
         clear_upload_button.click(
@@ -689,7 +688,6 @@ def gradio_train_human_gui_tab(headless=False):
                 upload_images,
                 info_text,
             ],
-            show_progress=False
         )
         clear_train_button.click(
             clear_images,
@@ -698,7 +696,6 @@ def gradio_train_human_gui_tab(headless=False):
                 images_preview,
                 info_text,
             ],
-            show_progress=False
         )
 
         show_files.click(
@@ -771,3 +768,5 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[output_folder, lora_postfix],
             outputs=[lora_files]
         )
+
+    gradio_aurobit_face_verify_gui_tab(headless=headless)

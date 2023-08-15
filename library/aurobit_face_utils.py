@@ -19,7 +19,7 @@ from library.custom_logging import setup_logging
 log = setup_logging()
 
 
-def get_image_file_paths(directory):
+def _get_image_file_paths(directory):
     image_file_paths = []
     for file in os.listdir(directory):
         full_file_path = os.path.join(directory, file)
@@ -31,7 +31,7 @@ def get_image_file_paths(directory):
     return image_file_paths
 
 
-def parse_analysis_result(result):
+def _parse_analysis_result(result):
     if not result:
         log.warning("No face detected in the image.")
         return None
@@ -46,7 +46,7 @@ def parse_analysis_result(result):
     return parsed_result
 
 
-def analyze_face_data(face_data):
+def _analyze_face_data(face_data):
     if not face_data:
         return {}
 
@@ -76,13 +76,21 @@ def analyze_face_data(face_data):
 
 
 def gather_face_info(input_path):
-    files = get_image_file_paths(input_path)
+    files = _get_image_file_paths(input_path)
     result = []
     for img in files:
-        face_data = parse_analysis_result(DeepFace.analyze(img, ('race', 'gender', 'age'), enforce_detection=False))
+        face_data = _parse_analysis_result(DeepFace.analyze(img, ('race', 'gender', 'age'), enforce_detection=False))
         if not face_data:
             continue
         face_data['source'] = img
         result.append(face_data)
 
-    return (result, analyze_face_data(result))
+    return (result, _analyze_face_data(result))
+
+
+def verify_one2one(img_a, img_b):
+    result = DeepFace.verify(img_a, img_b, enforce_detection=False)
+    return {
+        'metric': result['similarity_metric'],
+        'similarity': result['distance']
+    }
