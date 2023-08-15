@@ -16,8 +16,6 @@ import gradio as gr
 import library.train_util as train_util
 from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
-from library.aurobit_face_utils import gather_face_info
-from library.aurobit_face_verification_gui import gradio_aurobit_face_verify_gui_tab
 
 # Set up logging
 log = setup_logging()
@@ -78,7 +76,17 @@ def on_images_uploaded(
             shutil.move(filepath, output_folder)
 
     # Analysis
-    _, analysis_result = gather_face_info(output_folder)
+    run_cmd0 = f'accelerate launch "{os.path.join("library", "aurobit_face_analysis_script.py")}"'
+    run_cmd0 += f' "--input_path={output_folder}"'
+    run_cmd0 += f' "--output_path={final_output_folder}"'
+    if api_call:
+        with open(f"{final_output_folder}/log.txt", 'a') as f:
+            subprocess.run(run_cmd0, stdout=f, stderr=subprocess.STDOUT, shell=True)
+    else:
+        subprocess.run(run_cmd0, shell=True)
+    with open(f'{final_output_folder}/faces.txt') as f:
+        j = json.load(f)
+        analysis_result = j['stats']
 
     # Update folders for lora config
     mode = 'default'
@@ -768,5 +776,3 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[output_folder, lora_postfix],
             outputs=[lora_files]
         )
-
-    gradio_aurobit_face_verify_gui_tab(headless=headless)

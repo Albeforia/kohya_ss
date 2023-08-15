@@ -1,3 +1,4 @@
+import argparse
 import datetime
 import json
 import os
@@ -9,14 +10,8 @@ import traceback
 import random
 import math
 from collections import Counter
-from PIL import Image
-from pathlib import Path
 from deepface import DeepFace
-
-from library.custom_logging import setup_logging
-
-# Set up logging
-log = setup_logging()
+from pathlib import Path
 
 
 def _get_image_file_paths(directory):
@@ -33,7 +28,7 @@ def _get_image_file_paths(directory):
 
 def _parse_analysis_result(result):
     if not result:
-        log.warning("No face detected in the image.")
+        print("No face detected in the image.")
         return None
 
     first_face = result[0]
@@ -73,7 +68,7 @@ def _analyze_face_data(face_data):
             probability_radios[gender_type] = sum(
                 d['probability_radio'] for d in face_data if d['gender'] == gender_type) / count
         gender = max(probability_radios, key=probability_radios.get)
-        log.info(f"By frequency: {most_common_gender}; by weight: {gender}")
+        print(f"By frequency: {most_common_gender}; by weight: {gender}")
 
     # Compute race ratio for the most common race
     race_counter = Counter(face['race'] for face in face_data)
@@ -104,9 +99,27 @@ def gather_face_info(input_path):
     return (result, _analyze_face_data(result))
 
 
-def verify_one2one(img_a, img_b):
-    result = DeepFace.verify(img_a, img_b, enforce_detection=False)
-    return {
-        'metric': result['similarity_metric'],
-        'similarity': result['distance']
-    }
+def main(args):
+    results, stats = gather_face_info(args.input_path)
+    with open(f'{args.output_path}/faces.txt', 'w') as f:
+        f.write(json.dumps({
+            'faces': results,
+            'stats': stats
+        }))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        '--input_path',
+        dest='input_path',
+        type=str,
+        default=None)
+    parser.add_argument(
+        '--output_path',
+        dest='output_path',
+        type=str,
+        default=None)
+
+    main(parser.parse_args())
