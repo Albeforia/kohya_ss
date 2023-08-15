@@ -42,7 +42,7 @@ def _parse_analysis_result(result):
     dom_gender = first_face['dominant_gender']
     ratio = woman_prob / man_prob if dom_gender == 'Woman' else man_prob / woman_prob
     parsed_result = {
-        "age": int(first_face["age"]),
+        # "age": int(first_face["age"]),
         "gender": dom_gender,
         "probability_radio": ratio,
         "race": first_face["dominant_race"]
@@ -56,7 +56,7 @@ def _analyze_face_data(face_data):
         return {}
 
     # Compute average age
-    average_age = sum(face['age'] for face in face_data) / len(face_data)
+    # average_age = sum(face['age'] for face in face_data) / len(face_data)
 
     # Compute gender ratio for the most common gender
     gender_counter = Counter(face['gender'] for face in face_data)
@@ -83,7 +83,7 @@ def _analyze_face_data(face_data):
 
     return {
         "total_faces": len(face_data),
-        "average_age": average_age,
+        # "average_age": average_age,
         "most_common_gender": gender,
         # "gender_ratio": gender_ratio,
         "most_common_race": most_common_race,
@@ -95,7 +95,7 @@ def gather_face_info(input_path):
     files = _get_image_file_paths(input_path)
     result = []
     for img in files:
-        face_data = _parse_analysis_result(DeepFace.analyze(img, ('race', 'gender', 'age'), enforce_detection=False))
+        face_data = _parse_analysis_result(DeepFace.analyze(img, ('race', 'gender'), enforce_detection=False))
         if not face_data:
             continue
         face_data['source'] = img
