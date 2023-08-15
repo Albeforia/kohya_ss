@@ -37,9 +37,14 @@ def _parse_analysis_result(result):
         return None
 
     first_face = result[0]
+    man_prob = first_face['gender']['Man']
+    woman_prob = first_face['gender']['Woman']
+    dom_gender = first_face['dominant_gender']
+    ratio = woman_prob / man_prob if dom_gender == 'Woman' else man_prob / woman_prob
     parsed_result = {
         "age": int(first_face["age"]),
-        "gender": first_face["dominant_gender"],
+        "gender": dom_gender,
+        "probability_radio": ratio,
         "race": first_face["dominant_race"]
     }
 
@@ -59,6 +64,17 @@ def _analyze_face_data(face_data):
     most_common_gender, most_common_gender_count = gender_counter.most_common(1)[0]
     gender_ratio = most_common_gender_count / total_gender_count
 
+    gender = ""
+    if gender_ratio > 0.8:
+        gender = most_common_gender
+    else:
+        probability_radios = {}
+        for gender_type, count in gender_counter.items():
+            probability_radios[gender_type] = sum(
+                d['probability_radio'] for d in face_data if d['gender'] == gender_type) / count
+        gender = max(probability_radios, key=probability_radios.get)
+        log.info(f"By frequency: {most_common_gender}; by weight: {gender}")
+
     # Compute race ratio for the most common race
     race_counter = Counter(face['race'] for face in face_data)
     total_race_count = sum(race_counter.values())
@@ -68,7 +84,7 @@ def _analyze_face_data(face_data):
     return {
         "total_faces": len(face_data),
         "average_age": average_age,
-        "most_common_gender": most_common_gender,
+        "most_common_gender": gender,
         # "gender_ratio": gender_ratio,
         "most_common_race": most_common_race,
         # "race_ratio": race_ratio
