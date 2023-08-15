@@ -16,13 +16,17 @@ import gradio as gr
 import library.train_util as train_util
 from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
+from library.aurobit_face_utils import gather_face_info
 
 # Set up logging
 log = setup_logging()
 
 # PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
-config_file = 'presets/lora/user_presets/lora_config.json'
+config_files = {
+    'default': 'presets/lora/user_presets/lora_config.json',
+    'male_focus': 'presets/lora/user_presets/lora_config_male.json'
+}
 
 
 def get_matting_cmd(from_folder, to_folder):
@@ -56,7 +60,6 @@ def on_images_uploaded_simple(files):
 def on_images_uploaded(
         files,
         auto_matting,
-        lora_config_json,
         api_call=False
 ):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -65,13 +68,6 @@ def on_images_uploaded(
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(final_output_folder)
 
-    # Update folders for lora config
-    lora_config_json.update({'train_data_dir': f"{output_folder}/../processed"})
-    lora_config_json.update({'output_dir': f"{final_output_folder}"})
-    lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
-    with open(config_file, 'w') as json_file:
-        json.dump(lora_config_json, json_file)  # save to file
-
     # Move images to workspace
     for file in files:
         filepath = file if isinstance(file, str) else file.name
@@ -79,6 +75,21 @@ def on_images_uploaded(
         ext = ext.lower()
         if ext in ['.png', '.jpg', '.jpeg']:
             shutil.move(filepath, output_folder)
+
+    # Analysis
+    _, analysis_result = gather_face_info(output_folder)
+
+    # Update folders for lora config
+    mode = 'default'
+    if analysis_result['most_common_gender'] == 'Man':
+        mode = 'male_focus'
+    config_file_path = config_files[mode]
+    lora_config_json = load_lora_config(use_wandb=not api_call, mode=mode)
+    lora_config_json.update({'train_data_dir': f"{output_folder}/../processed"})
+    lora_config_json.update({'output_dir': f"{final_output_folder}"})
+    lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
+    with open(config_file_path, 'w') as json_file:
+        json.dump(lora_config_json, json_file)  # save to file
 
     # Matting
     if auto_matting:
@@ -99,9 +110,10 @@ def on_images_uploaded(
 
     return [
         output_folder,
-        gr.update(value=f"`Images uploaded to: {output_folder}`"),
-        gr.update(value=config_file),  # config_file_name
+        gr.update(value=f"`Images uploaded, {analysis_result}`"),
+        gr.update(value=config_file_path),  # config_file_name
         lora_config_json,
+        analysis_result
     ]
 
 
@@ -457,9 +469,18 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
         )
 
 
-def load_lora_config(use_wandb=True):
-    with open(config_file) as f:
+def load_lora_config(use_wandb=True, mode='default'):
+    with open(config_files[mode]) as f:
         config = json.load(f)
+
+        seed = config['seed']
+        if not seed:
+            seed = 2076
+
+        gender = '1girl'
+        if mode == 'male_focus':
+            gender = '1boy'
+
         config['save_state'] = False
         config['save_every_n_steps'] = 0
         config['save_last_n_steps'] = 0
@@ -468,7 +489,7 @@ def load_lora_config(use_wandb=True):
         config['sample_every_n_epochs'] = 1
         config['sample_every_n_steps'] = 0
         config[
-            'sample_prompts'] = '(masterpiece, best quality), 1girl, solo, close-up, --n (worst quality, low quality:2), cropped, lowres, watermark,  --w 512 --h 512 --l 7 --s 24  --d 1337'
+            'sample_prompts'] = f'(masterpiece, best quality), {gender}, solo, upper body, --n (worst quality, low quality:2), nudity, nsfw, cropped, lowres, watermark,  --w 512 --h 704 --l 7 --s 24  --d {seed}'
         config['sample_sampler'] = 'euler'
 
         if use_wandb:
@@ -503,15 +524,15 @@ def show_lora_files(lora_config_json):
 
 
 def _train_api(input_folder, model_path, trigger_words):
-    config = load_lora_config(use_wandb=False)
+    uploaded_files = get_file_paths(input_folder)
+
+    # Preprocess
+    work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, api_call=True)
+    log.info(face_stats)
+    # TODO change model path by gender
     config.update({'pretrained_model_name_or_path': model_path})
 
     try:
-        uploaded_files = get_file_paths(input_folder)
-
-        # Preprocess
-        work_folder, _, _, _ = on_images_uploaded(uploaded_files, auto_matting=True, lora_config_json=config,
-                                                  api_call=True)
         train_folder, _, _ = \
             process_images(work_folder, 'midfull_face', 512, 512, 10, 0, 1, {}, config, api_call=True)
         process_images(work_folder, 'whole_face', 512, 512, 20, 0, 1, {}, config, api_call=True)
@@ -548,6 +569,7 @@ def gradio_train_human_gui_tab(headless=False):
     with gr.Tab('人像训练'):
         upload_folder = gr.Textbox(visible=False)
         train_folder = gr.Textbox(visible=False)
+        face_stats = gr.State({})
         preview_images_dict = gr.State({})
 
         info_text = gr.Markdown()
@@ -602,7 +624,7 @@ def gradio_train_human_gui_tab(headless=False):
 
         with gr.Accordion('[Step 3] Train', open=False):
             with gr.Accordion('Params', open=False):
-                lora_config_json = gr.JSON(load_lora_config, show_label=False)
+                lora_config_json = gr.JSON(load_lora_config, show_label=False, visible=False)
 
             (
                 lora_train_data_dir,
@@ -626,13 +648,13 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[
                 upload_images,  # files
                 auto_matting,
-                lora_config_json
             ],
             outputs=[
                 upload_folder,
                 info_text,
                 config_file_name,
-                lora_config_json
+                lora_config_json,
+                face_stats
             ],
         )
 
