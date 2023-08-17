@@ -21,12 +21,8 @@ from lora_gui import lora_tab, train_model
 # Set up logging
 log = setup_logging()
 
-# PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
-config_files = {
-    'default': 'presets/lora/user_presets/lora_config.json',
-    'male_focus': 'presets/lora/user_presets/lora_config_male.json'
-}
+# PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 
 def get_matting_cmd(from_folder, to_folder):
@@ -90,14 +86,21 @@ def on_images_uploaded(
         analysis_result = j['stats']
 
     # Update folders for lora config
-    mode = 'default'
+    with open('training_profile.json') as f:
+        training_profile = json.load(f)
+    basemodel_type = training_profile.get('default', 'majic')
+    basemodel_profile = training_profile[basemodel_type]
+
+    mode = 'female'
     if analysis_result['most_common_gender'] == 'Man':
-        mode = 'male_focus'
-    config_file_path = config_files[mode]
-    lora_config_json = load_lora_config(use_wandb=not api_call, mode=mode)
+        mode = 'male'
+    config_file_path = basemodel_profile[mode]
+
+    lora_config_json = load_lora_config(use_wandb=not api_call, mode=mode, path=config_file_path)
     lora_config_json.update({'train_data_dir': f"{output_folder}/../processed"})
     lora_config_json.update({'output_dir': f"{final_output_folder}"})
     lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
+    lora_config_json.update({'pretrained_model_name_or_path': basemodel_profile['path']})
     with open(config_file_path, 'w') as json_file:
         json.dump(lora_config_json, json_file)  # save to file
 
@@ -478,8 +481,8 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
         )
 
 
-def load_lora_config(use_wandb=True, mode='default'):
-    with open(config_files[mode]) as f:
+def load_lora_config(use_wandb=True, mode='female', path='presets/lora/user_presets/lora_config.json'):
+    with open(path) as f:
         config = json.load(f)
 
         seed = config['seed']
@@ -487,7 +490,7 @@ def load_lora_config(use_wandb=True, mode='default'):
             seed = 2076
 
         gender = '1girl'
-        if mode == 'male_focus':
+        if mode == 'male':
             gender = '1boy'
 
         config['save_state'] = False

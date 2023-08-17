@@ -48,3 +48,4 @@ requirements_tmp_for_setup.txt
 presets/*/user_presets/*
 
 _workspace
+training_profile.json
