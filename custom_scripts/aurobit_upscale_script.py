@@ -38,8 +38,6 @@ def main(args):
     fname, fext = os.path.splitext(img_filename)
     sr_img_filename = f"{fname}_x{args.scale}{fext}"
 
-    print(path_to_image)
-
     image.save(os.path.join(args.output_path, img_filename))
     sr_image.save(os.path.join(args.output_path, sr_img_filename))
 
