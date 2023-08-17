@@ -15,6 +15,7 @@ import gradio as gr
 
 import library.train_util as train_util
 from library.custom_logging import setup_logging
+from library.aurobit_upscale_gui import gradio_aurobit_upscale_gui_tab
 from lora_gui import lora_tab, train_model
 
 # Set up logging
@@ -76,7 +77,7 @@ def on_images_uploaded(
             shutil.move(filepath, output_folder)
 
     # Analysis
-    run_cmd0 = f'accelerate launch "{os.path.join("library", "aurobit_face_analysis_script.py")}"'
+    run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
     run_cmd0 += f' "--input_path={output_folder}"'
     run_cmd0 += f' "--output_path={final_output_folder}"'
     if api_call:
@@ -776,3 +777,5 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[output_folder, lora_postfix],
             outputs=[lora_files]
         )
+
+    gradio_aurobit_upscale_gui_tab(headless=headless)
