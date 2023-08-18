@@ -52,7 +52,7 @@ def partition_list(arr, m):
     return [arr[i:i + n] for i in range(0, len(arr), n)]
 
 
-def save_result(alpha, path, im_path, trimap=None, fg_estimate=True, fg=None, background=None):
+def save_result(alpha, path, im_path, trimap=None, fg_estimate=True, fg=None, background=None, save_mask=False):
     """
     Save alpha and rgba.
 
@@ -78,7 +78,8 @@ def save_result(alpha, path, im_path, trimap=None, fg_estimate=True, fg=None, ba
         alpha[trimap == 0] = 0
         alpha[trimap == 255] = 255
     alpha = (alpha).astype('uint8')
-    # cv2.imwrite(alpha_save_path, alpha)   # skip saving mask
+    if save_mask:
+        cv2.imwrite(alpha_save_path, alpha)
 
     # save rgba
     im = cv2.imread(im_path)
@@ -137,7 +138,8 @@ def predict(model,
             trimap_list=None,
             save_dir='output',
             fg_estimate=True,
-            background=None):
+            background=None,
+            save_mask=False):
     """
     predict and visualize the image_list.
 
@@ -213,7 +215,8 @@ def predict(model,
                 trimap=trimap,
                 fg_estimate=fg_estimate,
                 fg=fg,
-                background=background)
+                background=background,
+                save_mask=save_mask)
 
             # rvm have member which need to reset.
             if hasattr(model, 'reset'):

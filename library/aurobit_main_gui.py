@@ -16,6 +16,7 @@ import gradio as gr
 import library.train_util as train_util
 from library.custom_logging import setup_logging
 from library.aurobit_upscale_gui import gradio_aurobit_upscale_gui_tab
+from library.aurobit_video_gui import gradio_aurobit_video_gui_tab
 from lora_gui import lora_tab, train_model
 
 # Set up logging
@@ -782,3 +783,5 @@ def gradio_train_human_gui_tab(headless=False):
         )
 
     gradio_aurobit_upscale_gui_tab(headless=headless)
+
+    gradio_aurobit_video_gui_tab(headless=headless)

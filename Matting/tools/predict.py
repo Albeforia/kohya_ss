@@ -69,6 +69,12 @@ def parse_args():
         type=str,
         default=None)
     parser.add_argument(
+        '--save_mask',
+        dest='save_mask',
+        help='',
+        type=bool,
+        default=False)
+    parser.add_argument(
         '--fg_estimate',
         default=True,
         type=eval,
@@ -113,7 +119,8 @@ def main(args):
         trimap_list=trimap_list,
         save_dir=args.save_dir,
         fg_estimate=args.fg_estimate,
-        background=args.background)
+        background=args.background,
+        save_mask=args.save_mask)
 
 
 if __name__ == '__main__':

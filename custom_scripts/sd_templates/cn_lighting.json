@@ -1,0 +1,40 @@
+{
+  "cn_config": {
+    "count": 1,
+    "source": [
+      "mask"
+    ]
+  },
+  "payload": {
+    "negative_prompt": "(worst quality:1.2), (low quality:1.2), (lowres:1.1), (monochrome:1.1), (greyscale), (((bad anatomy))), (((deformed))), (((disfigured))), watermark, mutation hands, mutation fingers, extra fingers, missing fingers",
+    "width": 512,
+    "height": 512,
+    "denoising_strength": 0.5,
+    "sampler_name": "DPM++ 2M Karras",
+    "batch_size": 1,
+    "steps": 20,
+    "cfg_scale": 7,
+    "seed": -1,
+    "override_settings": {
+    },
+    "override_settings_restore_afterwards": false,
+    "alwayson_scripts": {
+      "controlnet": {
+        "args": [
+          {
+            "module": null,
+            "model": "lightingBasedPicture_v10",
+            "weight": 0.6,
+            "threshold_a": 0,
+            "resize_mode": 1,
+            "processor_res": 64,
+            "pixel_perfect": true,
+            "control_mode": 0,
+            "guidance_start": 0.0,
+            "guidance_end": 0.7
+          }
+        ]
+      }
+    }
+  }
+}
