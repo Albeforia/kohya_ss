@@ -237,7 +237,13 @@ class ExtractSubprocessor(Subprocessor):
                     # TODO Output correct resolution
                     image_height = image_size
                     if face_type == FaceType.HEAD or face_type == FaceType.HEAD_NO_ALIGN:
-                        image_height = int(image_size * 1.5)
+                        points = LandmarksProcessor.transform_points(
+                            [(0, 0), (0, image_size - 1), (image_size - 1, image_size - 1), (image_size - 1, 0)],
+                            image_to_face_mat, True)
+                        trans_head_ratio = abs(points[2][0] - points[0][0]) / image.shape[0]  # height
+                        if trans_head_ratio < 0.7:
+                            image_height = int(image_size * 1.5)
+
                     face_image = cv2.warpAffine(image, image_to_face_mat, (image_size, image_height),
                                                 cv2.INTER_LANCZOS4,
                                                 borderMode=cv2.BORDER_CONSTANT, borderValue=(255, 255, 255))
@@ -255,9 +261,11 @@ class ExtractSubprocessor(Subprocessor):
 
                     rect_width = rect[2] - rect[0]
                     rect_height = rect[3] - rect[1]
-                    max_ratio = max([rect_width / image.shape[0], rect_height / image.shape[1]])
+                    max_ratio = max([rect_width / image.shape[1], rect_height / image.shape[0]])
+                    # print(f"{image.shape} {rect_width} x {rect_height}, {max_ratio}")
+                    # If face is too big relative to the image, skip 'HEAD' cropping
                     if not data.manual and (
-                            face_type == FaceType.HEAD or face_type == FaceType.HEAD_NO_ALIGN) and max_ratio > 0.8:
+                            face_type == FaceType.HEAD or face_type == FaceType.HEAD_NO_ALIGN) and max_ratio > 0.67:
                         continue
 
                     if not data.manual and face_type <= FaceType.FULL_NO_ALIGN and landmarks_area > 4 * rect_area:  # get rid of faces which umeyama-landmark-area > 4*detector-rect-area
