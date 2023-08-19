@@ -34,7 +34,7 @@ scikit-image==0.21.0
 colorama==0.4.6
 pretrainedmodels
 deepface
-imageio[ffmpeg]
+imageio-ffmpeg
 -r Matting/requirements.txt
 # for kohya_ss library
 -e . # no_verify leave this to specify not checking this a verification stage
