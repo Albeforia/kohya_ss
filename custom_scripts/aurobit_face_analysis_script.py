@@ -1,17 +1,9 @@
 import argparse
-import datetime
 import json
 import os
-import re
-import shutil
-import subprocess
-import time
-import traceback
-import random
-import math
 from collections import Counter
+
 from deepface import DeepFace
-from pathlib import Path
 
 
 def _get_image_file_paths(directory):
@@ -32,6 +24,8 @@ def _parse_analysis_result(result):
         return None
 
     first_face = result[0]
+    width = first_face['region']['w']
+    height = first_face['region']['h']
     man_prob = first_face['gender']['Man']
     woman_prob = first_face['gender']['Woman']
     dom_gender = first_face['dominant_gender']
@@ -40,7 +34,8 @@ def _parse_analysis_result(result):
         # "age": int(first_face["age"]),
         "gender": dom_gender,
         "probability_radio": ratio,
-        "race": first_face["dominant_race"]
+        "race": first_face["dominant_race"],
+        "size": [width, height]
     }
 
     return parsed_result
@@ -90,7 +85,8 @@ def gather_face_info(input_path):
     files = _get_image_file_paths(input_path)
     result = []
     for img in files:
-        face_data = _parse_analysis_result(DeepFace.analyze(img, ('race', 'gender'), enforce_detection=False))
+        face_data = _parse_analysis_result(
+            DeepFace.analyze(img, ('race', 'gender'), enforce_detection=False, detector_backend='retinaface'))
         if not face_data:
             continue
         face_data['source'] = img
