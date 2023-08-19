@@ -1,4 +1,8 @@
 {
+  "base_model_config": {
+    "name": "revAnimated_v122",
+    "clip": 2
+  },
   "cn_config": {
     "count": 1,
     "source": [
@@ -15,8 +19,6 @@
     "steps": 20,
     "cfg_scale": 7,
     "seed": -1,
-    "override_settings": {
-    },
     "override_settings_restore_afterwards": false,
     "alwayson_scripts": {
       "controlnet": {

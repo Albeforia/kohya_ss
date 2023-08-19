@@ -133,7 +133,7 @@ def gradio_aurobit_video_gui_tab(headless=False):
                     sd_template = gr.Dropdown(
                         label='Templates',
                         choices=load_sd_templates(),
-                        value='lighting',
+                        value='test',
                         scale=1
                     )
                     refresh_templates = gr.Button('Refresh')

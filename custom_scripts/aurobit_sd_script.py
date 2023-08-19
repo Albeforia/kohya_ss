@@ -94,6 +94,13 @@ def main(args):
     # Set prompts
     params['prompt'] = args.prompt
 
+    # Set base model
+    base_model_config = config['base_model_config']
+    params['override_settings'] = {
+        'sd_model_checkpoint': base_model_config['name'],
+        'CLIP_stop_at_last_layers': base_model_config['clip']
+    }
+
     # The first frame
     img, seed = call_sd(url, params, 0, frame_map, config['cn_config'], input_img=None)
     params['seed'] = seed
@@ -102,6 +109,7 @@ def main(args):
 
         # Remaining frames
         for idx in range(1, len(frame_map['source'])):
+            print(f'Generating frame {idx}')
             img, _ = call_sd(url, params, idx, frame_map, config['cn_config'], input_img=None)
             if img is not None:
                 img.save(os.path.join(args.output_path, os.path.basename(frame_map['source'][idx])))
