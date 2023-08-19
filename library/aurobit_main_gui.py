@@ -1,22 +1,22 @@
 import datetime
 import json
+import math
 import os
+import random
 import re
 import shutil
 import subprocess
 import time
 import traceback
-import random
-import math
-from PIL import Image
 from pathlib import Path
 
 import gradio as gr
+from PIL import Image
 
 import library.train_util as train_util
-from library.custom_logging import setup_logging
 from library.aurobit_upscale_gui import gradio_aurobit_upscale_gui_tab
 from library.aurobit_video_gui import gradio_aurobit_video_gui_tab
+from library.custom_logging import setup_logging
 from lora_gui import lora_tab, train_model
 
 # Set up logging
@@ -380,7 +380,7 @@ def caption_images(
 
     run_cmd += f' --recursive'
     run_cmd += f' --remove_underscore'
-    run_cmd += f' --frequency_tags'
+    run_cmd += f' --frequency_tags'  # save tags to tags.txt
 
     if not undesired_tags == '':
         run_cmd += f' --undesired_tags="{undesired_tags}"'
@@ -408,6 +408,11 @@ def caption_images(
         postfix=postfix,
         recursive=True
     )
+
+    if os.path.exists(f"{train_data_dir}/../output/tags.txt"):
+        with open(f"{train_data_dir}/../output/tags.txt", 'a') as f:
+            f.write(f"prefix: {prefix}")
+            f.write(f"postfix: {postfix}")
 
     return gr.update(value='`Captioning done`')
 
