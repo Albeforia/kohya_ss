@@ -78,6 +78,16 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt)
         ]
 
 
+def list_models(sd_address, sd_port):
+    api_url = f'http://{sd_address}:{sd_port}/sdapi/v1/sd-models'
+    r = requests.get(url=api_url)
+    if r.status_code == 200:
+        models = r.json()
+        return gr.update(value=models)
+
+    return gr.update(value='Cannot connect to the server')
+
+
 def list_cn(sd_address, sd_port):
     api_url = f'http://{sd_address}:{sd_port}/controlnet/control_types'
     r = requests.get(url=api_url)
@@ -142,6 +152,10 @@ def gradio_aurobit_video_gui_tab(headless=False):
 
             generate_btn = gr.Button('Generate', variant='primary')
             with gr.Row(equal_height=False):
+                list_models_btn = gr.Button('List base models')
+                with gr.Accordion('Available models on the server', open=False):
+                    models_info = gr.Json(show_label=False)
+            with gr.Row(equal_height=False):
                 list_cn_btn = gr.Button('List ControlNets')
                 with gr.Accordion('Available ControlNets on the server', open=False):
                     cn_info = gr.Json(show_label=False)
@@ -176,6 +190,16 @@ def gradio_aurobit_video_gui_tab(headless=False):
             outputs=[
                 generated_folder,
                 info_text
+            ]
+        )
+
+        list_models_btn.click(
+            list_models,
+            inputs=[
+                sd_address, sd_port
+            ],
+            outputs=[
+                models_info
             ]
         )
 
