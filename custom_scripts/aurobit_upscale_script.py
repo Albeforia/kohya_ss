@@ -1,17 +1,36 @@
 import argparse
-import datetime
-import json
 import os
-import re
-import shutil
-import subprocess
-import time
+
 import torch
-import random
-import math
-from pathlib import Path
 from PIL import Image
+
 from RealESRGAN import RealESRGAN
+
+
+def _get_image_file_paths(directory):
+    image_file_paths = []
+    for file in os.listdir(directory):
+        full_file_path = os.path.join(directory, file)
+        if os.path.isfile(full_file_path):
+            # Check the file extension
+            _, ext = os.path.splitext(full_file_path)
+            if ext.lower() in ['.jpg', '.jpeg', '.png']:
+                image_file_paths.append(full_file_path)
+    return image_file_paths
+
+
+def upscale_single_image(model, image_file, scale, output_path):
+    image = Image.open(image_file).convert('RGB')
+
+    # Upscale
+    sr_image = model.predict(image)
+
+    img_filename = os.path.basename(image_file)
+    fname, fext = os.path.splitext(img_filename)
+    sr_img_filename = f"{fname}_x{scale}{fext}"
+
+    # image.save(os.path.join(output_path, img_filename))
+    sr_image.save(os.path.join(output_path, sr_img_filename))
 
 
 def main(args):
@@ -28,18 +47,13 @@ def main(args):
     # Download weights if not cached
     model.load_weights(model_name, download=True)
 
-    path_to_image = args.input_path
-    image = Image.open(path_to_image).convert('RGB')
-
-    # Upscale
-    sr_image = model.predict(image)
-
-    img_filename = os.path.basename(path_to_image)
-    fname, fext = os.path.splitext(img_filename)
-    sr_img_filename = f"{fname}_x{args.scale}{fext}"
-
-    image.save(os.path.join(args.output_path, img_filename))
-    sr_image.save(os.path.join(args.output_path, sr_img_filename))
+    if os.path.isdir(args.input_path):
+        files = _get_image_file_paths(args.input_path)
+        for img_file in files:
+            upscale_single_image(model, img_file, args.scale, args.output_path)
+    elif os.path.isfile(args.input_path):
+        path_to_image = args.input_path
+        upscale_single_image(model, path_to_image, args.scale, args.output_path)
 
 
 if __name__ == '__main__':

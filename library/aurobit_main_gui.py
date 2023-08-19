@@ -26,6 +26,15 @@ log = setup_logging()
 # PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
 
 
+def run_cmd_with_log(cmd, api_call, log_file):
+    log.info(cmd)
+    if api_call:
+        with open(log_file, 'a') as f:
+            subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
+    else:
+        subprocess.run(cmd, shell=True)
+
+
 def get_matting_cmd(from_folder, to_folder):
     run_cmd = f'accelerate launch "{os.path.join("Matting/tools", "predict.py")}"'
     run_cmd += f' "--config={os.path.join("Matting/configs/ppmattingv2", "ppmattingv2-stdc1-human_512.yml")}"'
@@ -57,11 +66,13 @@ def on_images_uploaded_simple(files):
 def on_images_uploaded(
         files,
         auto_matting,
+        auto_upscale,
         api_call=False
 ):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_folder = os.path.join('_workspace', current_time, 'original')
     final_output_folder = f"{output_folder}/../output"
+    log_file = f"{final_output_folder}/log.txt"
     os.makedirs(output_folder, exist_ok=True)
     os.makedirs(final_output_folder)
 
@@ -77,14 +88,27 @@ def on_images_uploaded(
     run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
     run_cmd0 += f' "--input_path={output_folder}"'
     run_cmd0 += f' "--output_path={final_output_folder}"'
-    if api_call:
-        with open(f"{final_output_folder}/log.txt", 'a') as f:
-            subprocess.run(run_cmd0, stdout=f, stderr=subprocess.STDOUT, shell=True)
-    else:
-        subprocess.run(run_cmd0, shell=True)
+    run_cmd_with_log(run_cmd0, api_call, log_file)
     with open(f'{final_output_folder}/faces.txt') as f:
         j = json.load(f)
+        detected_faces = j['faces']
         analysis_result = j['stats']
+
+    if auto_upscale:
+        to_upscale = set()
+        for face_data in detected_faces:
+            if max(face_data['size']) < 225:
+                to_upscale.add(face_data['source'])
+
+        tmp_folder = os.path.join(output_folder, '..', 'temp')
+        os.makedirs(tmp_folder, exist_ok=True)
+        for f in to_upscale:
+            shutil.move(f, tmp_folder)
+        run_cmdx = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
+        run_cmdx += f' "--input_path={tmp_folder}"'
+        run_cmdx += f' "--scale=2"'
+        run_cmdx += f' "--output_path={output_folder}"'
+        run_cmd_with_log(run_cmdx, api_call, log_file)
 
     # Update folders for lora config
     with open('training_profile.json') as f:
@@ -111,16 +135,7 @@ def on_images_uploaded(
         os.rename(output_folder, tmp_folder)
         os.makedirs(output_folder, exist_ok=True)
         run_cmd = get_matting_cmd(tmp_folder, output_folder)
-
-        log.info(run_cmd)
-        # if os.name == 'posix':
-        #     os.system(run_cmd)
-        # else:
-        if api_call:
-            with open(f"{final_output_folder}/log.txt", 'a') as f:
-                subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
-        else:
-            subprocess.run(run_cmd, shell=True)
+        run_cmd_with_log(run_cmd, api_call, log_file)
 
     return [
         output_folder,
@@ -545,7 +560,8 @@ def _train_api(input_folder, model_path, trigger_words):
     uploaded_files = get_file_paths(input_folder)
 
     # Preprocess
-    work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, api_call=True)
+    work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, auto_upscale=True,
+                                                               api_call=True)
     log.info(face_stats)
     # TODO change model path by gender
     config.update({'pretrained_model_name_or_path': model_path})
@@ -602,6 +618,7 @@ def gradio_train_human_gui_tab(headless=False):
                 )
                 with gr.Column(scale=0):
                     auto_matting = gr.Checkbox(value=True, label='Auto matting')
+                    auto_upscale = gr.Checkbox(value=True, label='Auto upscale')
                     clear_upload_button = gr.Button('Clear uploaded images', variant='stop')
                     clear_train_button = gr.Button('Clear training folder', variant='stop')
 
@@ -666,6 +683,7 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[
                 upload_images,  # files
                 auto_matting,
+                auto_upscale,
             ],
             outputs=[
                 upload_folder,
