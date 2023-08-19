@@ -1,20 +1,11 @@
 import argparse
 import base64
-import datetime
-import glob
+import io
 import json
 import os
-import io
 import re
-import shutil
-import subprocess
-import time
-import torch
-import random
+
 import requests
-import math
-import imageio
-from pathlib import Path
 from PIL import Image
 
 

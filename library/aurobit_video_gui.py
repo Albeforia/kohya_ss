@@ -1,24 +1,23 @@
 import datetime
-import json
 import os
-import re
-import requests
-import shutil
 import subprocess
-import time
-import traceback
-import random
-import math
-import uuid
-from PIL import Image
-from pathlib import Path
 
 import gradio as gr
+import requests
 
 from library.custom_logging import setup_logging
 
 # Set up logging
 log = setup_logging()
+
+
+def load_sd_templates():
+    l = sorted(os.listdir('custom_scripts/sd_templates/'))
+    return [os.path.splitext(f)[0] for f in l]
+
+
+def refresh_sd_templates():
+    return gr.update(choices=load_sd_templates())
 
 
 def handle_video_upload(input_video):
@@ -44,7 +43,7 @@ def handle_video_upload(input_video):
     ]
 
 
-def generate_images(source_folder, sd_address, sd_port, img_mode, img_prompt):
+def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt):
     if os.path.exists(source_folder) and os.path.isdir(source_folder) and os.listdir(source_folder):
         work_folder = os.path.join(source_folder, '..')
         output_folder = os.path.join(work_folder, 'generated')
@@ -52,9 +51,7 @@ def generate_images(source_folder, sd_address, sd_port, img_mode, img_prompt):
 
         api_url = f'http://{sd_address}:{sd_port}'
 
-        params_file = 'test.json'
-        if img_mode == 'lighting':
-            params_file = 'cn_lighting.json'
+        params_file = sd_template + '.json'
 
         run_cmd = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_sd_script.py")}"'
         run_cmd += f' "--work_path={work_folder}"'
@@ -79,6 +76,16 @@ def generate_images(source_folder, sd_address, sd_port, img_mode, img_prompt):
             gr.update(value=None),
             gr.update(value='Nothing to generate'),
         ]
+
+
+def list_cn(sd_address, sd_port):
+    api_url = f'http://{sd_address}:{sd_port}/controlnet/control_types'
+    r = requests.get(url=api_url)
+    if r.status_code == 200:
+        control_types = r.json()['control_types']
+        return gr.update(value=control_types['All'])
+
+    return gr.update(value='Cannot connect to the server')
 
 
 def make_gif_fn(source_folder, final_size, final_duration, final_loop):
@@ -119,20 +126,25 @@ def gradio_aurobit_video_gui_tab(headless=False):
 
         with gr.Accordion('[Step 1] 生图'):
             with gr.Row():
-                sd_address = gr.Textbox(label='IP for SD', value='127.0.0.1', scale=2)
-                sd_port = gr.Textbox(label='Port for SD', value='7860', scale=1)
+                sd_address = gr.Textbox(label='Server IP for SD', value='127.0.0.1', scale=2)
+                sd_port = gr.Textbox(label='Server port for SD', value='7860', scale=1)
             with gr.Row():
-                img_mode = gr.Dropdown(
-                    label='Mode',
-                    choices=[
-                        'lighting'
-                    ],
-                    value='lighting',
-                    scale=1
-                )
+                with gr.Column():
+                    sd_template = gr.Dropdown(
+                        label='Templates',
+                        choices=load_sd_templates(),
+                        value='lighting',
+                        scale=1
+                    )
+                    refresh_templates = gr.Button('Refresh')
+
                 img_prompt = gr.Textbox(label='Prompt', scale=2)
 
             generate_btn = gr.Button('Generate', variant='primary')
+            with gr.Row(equal_height=False):
+                list_cn_btn = gr.Button('List ControlNets')
+                with gr.Accordion('Available ControlNets on the server', open=False):
+                    cn_info = gr.Json(show_label=False)
 
         with gr.Accordion('[Step 2] 输出Gif'):
             with gr.Row():
@@ -158,12 +170,22 @@ def gradio_aurobit_video_gui_tab(headless=False):
             inputs=[
                 source_folder,
                 sd_address, sd_port,
-                img_mode,
+                sd_template,
                 img_prompt,
             ],
             outputs=[
                 generated_folder,
                 info_text
+            ]
+        )
+
+        list_cn_btn.click(
+            list_cn,
+            inputs=[
+                sd_address, sd_port
+            ],
+            outputs=[
+                cn_info
             ]
         )
 
@@ -179,4 +201,10 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 gif_folder,
                 info_text
             ]
+        )
+
+        refresh_templates.click(
+            refresh_sd_templates,
+            inputs=[],
+            outputs=[sd_template]
         )
