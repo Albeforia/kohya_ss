@@ -36,7 +36,29 @@ def submit_real_esrgan(image_path, scale_opt):
 
 
 def _upscale_api(image_path, scale_opt):
-    return submit_real_esrgan(image_path, scale_opt)
+    output_folder = os.path.join('_workspace', 'upscale', 'esrgan')
+    os.makedirs(output_folder, exist_ok=True)
+
+    scale = 2
+    if scale_opt == '4x':
+        scale = 4
+    elif scale_opt == '8x':
+        scale = 8
+
+    img_filename = os.path.basename(image_path)
+    fname, fext = os.path.splitext(img_filename)
+    sr_img_filename = f"{fname}_x{scale}{fext}"
+
+    run_cmd = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
+    run_cmd += f' "--input_path={image_path}"'
+    run_cmd += f' "--scale={scale}"'
+    run_cmd += f' "--output_path={output_folder}"'
+
+    p = subprocess.run(run_cmd, shell=True)
+    if p.returncode == 0:
+        return os.path.abspath(os.path.join(output_folder, sr_img_filename))
+
+    return None
 
 
 def gradio_aurobit_upscale_gui_tab(headless=False):
@@ -65,11 +87,12 @@ def gradio_aurobit_upscale_gui_tab(headless=False):
 
         # API
         api_only_image_path = gr.Textbox('', visible=False)
+        api_only_output_path = gr.Textbox('', visible=False)
         api_only_scale = gr.Textbox('', visible=False)
         api_only_upscale = gr.Button('', visible=False)
         api_only_upscale.click(
             _upscale_api,
             inputs=[api_only_image_path, api_only_scale],
-            outputs=[],
+            outputs=[api_only_output_path],
             api_name='upscale_esrgan'
         )
