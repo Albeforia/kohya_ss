@@ -426,7 +426,7 @@ def caption_images(
 
     if os.path.exists(f"{train_data_dir}/../output/tags.txt"):
         with open(f"{train_data_dir}/../output/tags.txt", 'a') as f:
-            f.write(f"prefix: {prefix}")
+            f.write(f"prefix: {prefix}\n")
             f.write(f"postfix: {postfix}")
 
     return gr.update(value='`Captioning done`')
