@@ -563,7 +563,7 @@ def _train_api(input_folder, model_path, trigger_words):
     work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, auto_upscale=True,
                                                                api_call=True)
     log.info(face_stats)
-    if model_path is not None:
+    if not model_path:
         config.update({'pretrained_model_name_or_path': model_path})
 
     try:
