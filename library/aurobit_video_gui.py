@@ -36,13 +36,13 @@ def images_to_video(img_folder, video_name, fps):
     height, width, layers = frame.shape
 
     # 创建视频编写器
-    video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+    video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'h264'), fps, (width, height))
 
     # 将所有图片写入视频
     for image in images:
         video.write(cv2.imread(os.path.join(img_folder, image)))
 
-    cv2.destroyAllWindows()
+    # cv2.destroyAllWindows()
     video.release()
 
 
@@ -164,7 +164,7 @@ def gradio_aurobit_video_gui_tab(headless=False):
         with gr.Accordion('上传视频'):
             with gr.Row():
                 input_video = gr.Video(show_label=False)
-                output_video = gr.Video(show_label=False, interactive=False)
+                output_video = gr.PlayableVideo(show_label=False)
 
         with gr.Accordion('生成'):
             with gr.Row():
