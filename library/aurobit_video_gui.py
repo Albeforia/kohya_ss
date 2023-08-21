@@ -1,7 +1,9 @@
 import datetime
 import os
 import subprocess
+import uuid
 
+import cv2
 import gradio as gr
 import requests
 
@@ -18,6 +20,30 @@ def load_sd_templates():
 
 def refresh_sd_templates():
     return gr.update(choices=load_sd_templates())
+
+
+def images_to_video(img_folder, video_name, fps):
+    # 图片文件夹路径和视频文件名
+    images = [img for img in os.listdir(img_folder) if
+              img.endswith(".png") or img.endswith(".jpeg") or img.endswith(".jpg")]
+
+    # 使用自定义的排序函数来处理帧序号
+    # 假设所有的文件名都是以"frame"开头
+    images.sort(key=lambda x: int(x[5:].split('.')[0]))
+
+    # 读取第一张图片来获取尺寸信息
+    frame = cv2.imread(os.path.join(img_folder, images[0]))
+    height, width, layers = frame.shape
+
+    # 创建视频编写器
+    video = cv2.VideoWriter(video_name, cv2.VideoWriter_fourcc(*'mp4v'), fps, (width, height))
+
+    # 将所有图片写入视频
+    for image in images:
+        video.write(cv2.imread(os.path.join(img_folder, image)))
+
+    cv2.destroyAllWindows()
+    video.release()
 
 
 def handle_video_upload(input_video):
@@ -46,8 +72,8 @@ def handle_video_upload(input_video):
 def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt):
     if os.path.exists(source_folder) and os.path.isdir(source_folder) and os.listdir(source_folder):
         work_folder = os.path.join(source_folder, '..')
-        output_folder = os.path.join(work_folder, 'generated')
-        os.makedirs(output_folder, exist_ok=True)
+        generated_folder = os.path.join(work_folder, 'generated')
+        os.makedirs(generated_folder, exist_ok=True)
 
         api_url = f'http://{sd_address}:{sd_port}'
 
@@ -59,20 +85,25 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt)
         run_cmd += f' "--mode=txt2img"'  # TODO
         run_cmd += f' "--params_file={params_file}"'
         run_cmd += f' "--prompt={img_prompt}"'
-        run_cmd += f' "--output_path={output_folder}"'
+        run_cmd += f' "--output_path={generated_folder}"'
 
         p = subprocess.run(run_cmd, shell=True)
         if p.returncode == 0:
+            out_video_path = os.path.join(work_folder, f'{uuid.uuid4()}.mp4')
+            images_to_video(generated_folder, out_video_path, 15)
             return [
-                gr.update(value=output_folder),
+                gr.update(value=generated_folder),
+                gr.update(value=out_video_path),
                 gr.update(value='Generation finished'),
             ]
         return [
+            gr.update(value=None),
             gr.update(value=None),
             gr.update(value='Error'),
         ]
     else:
         return [
+            gr.update(value=None),
             gr.update(value=None),
             gr.update(value='Nothing to generate'),
         ]
@@ -123,18 +154,19 @@ def make_gif_fn(source_folder, final_size, final_duration, final_loop):
 
 
 def gradio_aurobit_video_gui_tab(headless=False):
-    with gr.Tab('Video2Gif'):
+    with gr.Tab('Video'):
         source_folder = gr.Textbox(visible=False)
         generated_folder = gr.Textbox(visible=False)
         gif_folder = gr.Textbox(visible=False)
 
         info_text = gr.Markdown()
 
-        with gr.Accordion('[Step 0] 上传视频'):
+        with gr.Accordion('上传视频'):
             with gr.Row():
                 input_video = gr.Video(show_label=False)
+                output_video = gr.Video(show_label=False, interactive=False)
 
-        with gr.Accordion('[Step 1] 生图'):
+        with gr.Accordion('生成'):
             with gr.Row():
                 sd_address = gr.Textbox(label='Server IP for SD', value='127.0.0.1', scale=2)
                 sd_port = gr.Textbox(label='Server port for SD', value='7860', scale=1)
@@ -160,13 +192,13 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 with gr.Accordion('Available ControlNets on the server', open=False):
                     cn_info = gr.Json(show_label=False)
 
-        with gr.Accordion('[Step 2] 输出Gif'):
-            with gr.Row():
-                final_size = gr.Slider(label='Output size', value=256, minimum=128, maximum=512, step=64)
-                final_duration = gr.Slider(label='Output duration', value=2, minimum=0.5, maximum=4, step=0.5)
-                final_loop = gr.Checkbox(label='Loop', value=False)
-
-            make_gif = gr.Button('Make GIF', variant='primary')
+        # with gr.Accordion('[Step 2] 输出Gif'):
+        #     with gr.Row():
+        #         final_size = gr.Slider(label='Output size', value=256, minimum=128, maximum=512, step=64)
+        #         final_duration = gr.Slider(label='Output duration', value=2, minimum=0.5, maximum=4, step=0.5)
+        #         final_loop = gr.Checkbox(label='Loop', value=False)
+        #
+        #     make_gif = gr.Button('Make GIF', variant='primary')
 
         input_video.upload(
             handle_video_upload,
@@ -189,6 +221,7 @@ def gradio_aurobit_video_gui_tab(headless=False):
             ],
             outputs=[
                 generated_folder,
+                output_video,
                 info_text
             ]
         )
@@ -213,19 +246,19 @@ def gradio_aurobit_video_gui_tab(headless=False):
             ]
         )
 
-        make_gif.click(
-            make_gif_fn,
-            inputs=[
-                generated_folder,
-                final_size,
-                final_duration,
-                final_loop
-            ],
-            outputs=[
-                gif_folder,
-                info_text
-            ]
-        )
+        # make_gif.click(
+        #     make_gif_fn,
+        #     inputs=[
+        #         generated_folder,
+        #         final_size,
+        #         final_duration,
+        #         final_loop
+        #     ],
+        #     outputs=[
+        #         gif_folder,
+        #         info_text
+        #     ]
+        # )
 
         refresh_templates.click(
             refresh_sd_templates,
