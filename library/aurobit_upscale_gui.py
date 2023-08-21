@@ -1,17 +1,5 @@
-import datetime
-import json
 import os
-import re
-import requests
-import shutil
 import subprocess
-import time
-import traceback
-import random
-import math
-import uuid
-from PIL import Image
-from pathlib import Path
 
 import gradio as gr
 
@@ -47,6 +35,10 @@ def submit_real_esrgan(image_path, scale_opt):
     return gr.update(value=None)
 
 
+def _upscale_api(image_path, scale_opt):
+    return submit_real_esrgan(image_path, scale_opt)
+
+
 def gradio_aurobit_upscale_gui_tab(headless=False):
     with gr.Tab('超分辨率'):
         with gr.Accordion('Real-ESRGAN'):
@@ -69,4 +61,15 @@ def gradio_aurobit_upscale_gui_tab(headless=False):
             outputs=[
                 image_b
             ],
+        )
+
+        # API
+        api_only_image_path = gr.Textbox('', visible=False)
+        api_only_scale = gr.Textbox('', visible=False)
+        api_only_upscale = gr.Button('', visible=False)
+        api_only_upscale.click(
+            _upscale_api,
+            inputs=[api_only_image_path, api_only_scale],
+            outputs=[],
+            api_name='upscale_esrgan'
         )
