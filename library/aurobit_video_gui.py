@@ -82,7 +82,6 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt)
         run_cmd = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_sd_script.py")}"'
         run_cmd += f' "--work_path={work_folder}"'
         run_cmd += f' "--api_addr={api_url}"'
-        run_cmd += f' "--mode=txt2img"'  # TODO
         run_cmd += f' "--params_file={params_file}"'
         run_cmd += f' "--prompt={img_prompt}"'
         run_cmd += f' "--output_path={generated_folder}"'

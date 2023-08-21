@@ -6,7 +6,7 @@ import os
 import re
 
 import requests
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def list_cn(url):
@@ -26,11 +26,19 @@ def img_str(image):
     return img_str
 
 
-def call_sd(url, payload, frame_idx, frame_map, cn_config, input_img=None):
+def call_sd(mode, url, payload, frame_idx, frame_map, cn_config):
     # For img2img
-    if input_img is not None:
-        input_img_str = img_str(Image.open(input_img))
+    if 'img2img' in mode:
+        input_img_str = img_str(Image.open(frame_map['source'][frame_idx]))
         payload['init_images'] = [input_img_str]
+
+    # For inpainting
+    if 'mask' in mode:
+        mask_img = Image.open(frame_map['mask'][frame_idx])
+        if 'invert' in mode:
+            mask_img = ImageOps.invert(mask_img)
+        mask_str = img_str(mask_img)
+        payload['mask'] = mask_str
 
     # Setup CNs
     cn_unit = 0
@@ -78,18 +86,19 @@ def get_frame_map(work_path):
 
 
 def main(args):
-    end_point = '/sdapi/v1/txt2img' if args.mode == 'txt2img' else '/sdapi/v1/img2img'
-    url = f"{args.api_addr}{end_point}"
-
     frame_map = get_frame_map(args.work_path)
-
-    # cn_list = list_cn(args.api_addr)
-    # print(cn_list)
 
     config_file = f"custom_scripts/sd_templates/{args.params_file}"
     with open(config_file) as f:
         config = json.load(f)
         params = config['payload']
+
+    mode = config['mode']
+    end_point = '/sdapi/v1/txt2img'
+    if 'img2img' in mode:
+        end_point = '/sdapi/v1/img2img'
+
+    url = f"{args.api_addr}{end_point}"
 
     # Set prompts
     params['prompt'] = args.prompt
@@ -102,7 +111,7 @@ def main(args):
     }
 
     # The first frame
-    img, seed = call_sd(url, params, 0, frame_map, config['cn_config'], input_img=None)
+    img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'])
     params['seed'] = seed
     if img is not None:
         img.save(os.path.join(args.output_path, os.path.basename(frame_map['source'][0])))
@@ -110,7 +119,7 @@ def main(args):
         # Remaining frames
         for idx in range(1, len(frame_map['source'])):
             print(f'Generating frame {idx}')
-            img, _ = call_sd(url, params, idx, frame_map, config['cn_config'], input_img=None)
+            img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'])
             if img is not None:
                 img.save(os.path.join(args.output_path, os.path.basename(frame_map['source'][idx])))
 
@@ -128,11 +137,6 @@ if __name__ == '__main__':
         dest='api_addr',
         type=str,
         default='')
-    parser.add_argument(
-        '--mode',
-        dest='mode',
-        type=str,
-        default='txt2img')
     parser.add_argument(
         '--params_file',
         dest='params_file',
