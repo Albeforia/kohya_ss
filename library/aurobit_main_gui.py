@@ -563,8 +563,8 @@ def _train_api(input_folder, model_path, trigger_words):
     work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, auto_upscale=True,
                                                                api_call=True)
     log.info(face_stats)
-    # TODO change model path by gender
-    config.update({'pretrained_model_name_or_path': model_path})
+    if model_path is not None:
+        config.update({'pretrained_model_name_or_path': model_path})
 
     try:
         train_folder, _, _ = \
@@ -766,7 +766,7 @@ def gradio_train_human_gui_tab(headless=False):
                     # file_types=['image'],
                     # sacle=2
                 )
-            model_path = gr.Textbox(label='底模路径（必填）')
+            model_path = gr.Textbox(label='底模路径（必填）', visible=False, value=None)  # 废弃
             trigger_words = gr.Textbox(label='触发词（必填）')
             train_button = gr.Button('开始训练', variant='primary')
 
