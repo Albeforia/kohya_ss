@@ -3,10 +3,8 @@ import json
 import math
 import os
 import random
-import re
 import shutil
 import subprocess
-import time
 import traceback
 from pathlib import Path
 
@@ -212,10 +210,17 @@ def process_images(
             gr.update(value=f"`Please upload images first!`"),
         ]
 
-    output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
+    if face_type == 'best_faces':
+        output_folder = f"{input_folder}/../best_faces"
+        face_type = 'whole_face'
+        find_best = True
+    else:
+        output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
+        find_best = False
+
+    log_file = f"{lora_config_json['output_dir']}/log.txt"
 
     log.info(f'Processing images in {input_folder}...')
-    # progress(0.0, desc="Start Processing")
 
     run_cmd = f'accelerate launch "{os.path.join("DFL/mainscripts", "Extractor.py")}"'
     run_cmd += f' "{input_folder}"'
@@ -225,12 +230,6 @@ def process_images(
     run_cmd += f' "{target_height}"'
     run_cmd += f' "100"'  # jpeg quality
     run_cmd += f' "{pass_ratio}"'
-
-    # Sort
-    # run_cmd2 = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
-    # run_cmd2 += f' "{output_folder}"'
-    # run_cmd2 += f' "blur"'  # Sort method
-    # run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
 
     # Deblur
     # trash_path = f"{input_folder}/../{repeat}_{face_type}_trash"
@@ -250,7 +249,15 @@ def process_images(
             gr.update(value=f"`Face detection done, {face_type}`"),
         ]
 
-    run_cmd_with_log(run_cmd, api_call, f"{lora_config_json['output_dir']}/log.txt")
+    run_cmd_with_log(run_cmd, api_call, log_file)
+
+    if find_best:
+        # Sort
+        run_cmd2 = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
+        run_cmd2 += f' "{output_folder}"'
+        run_cmd2 += f' "final"'  # Sort method
+        run_cmd2 += f' "0"'  # Drop threshold
+        run_cmd_with_log(run_cmd2, api_call, log_file)
 
     return output()
 
@@ -597,6 +604,7 @@ def gradio_train_human_gui_tab(headless=False):
                         'whole_face_no_align',
                         'head',
                         'head_no_align',
+                        'best_faces'
                     ],
                     value='full_face'
                 )
