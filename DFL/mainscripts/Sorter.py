@@ -630,7 +630,7 @@ def sort_best_faster(input_path):
 
 
 def sort_best(input_path, faster=False):
-    target_count = io.input_int("Target number of faces?", 2000)
+    target_count = 128 * 4
 
     io.log_info("Performing sort by best faces.")
     if faster:
@@ -979,8 +979,10 @@ def main():
 
     desc, func = sort_func_methods[sort_by_method]
     trash_img_list = []
-    if drop_threshold > 0:
-        img_list, trash_img_list = func(input_path, drop_threshold)
+    if sort_by_method == 'blur':
+        img_list, trash_img_list = func(input_path, drop_threshold=drop_threshold)
+    else:
+        img_list, trash_img_list = func(input_path)
 
     final_process(input_path, img_list, trash_img_list)
 

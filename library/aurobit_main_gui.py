@@ -204,7 +204,6 @@ def process_images(
         preview_images_dict,
         lora_config_json,
         api_call=False,
-        # progress=gr.Progress()
 ):
     if input_folder == '':
         return [
@@ -227,41 +226,19 @@ def process_images(
     run_cmd += f' "100"'  # jpeg quality
     run_cmd += f' "{pass_ratio}"'
 
-    log.info(run_cmd)
-
-    run_cmd2 = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
-    run_cmd2 += f' "{output_folder}"'
-    run_cmd2 += f' "blur"'  # Sort method
-    run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
+    # Sort
+    # run_cmd2 = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
+    # run_cmd2 += f' "{output_folder}"'
+    # run_cmd2 += f' "blur"'  # Sort method
+    # run_cmd2 += f' "{drop_threshold}"'  # Drop threshold
 
     # Deblur
-    trash_path = f"{input_folder}/../{repeat}_{face_type}_trash"
-    fixed_path = f"{input_folder}/../{repeat}_{face_type}_fix"
-    run_cmd3 = f'accelerate launch "{os.path.join("DeblurGANv2", "predict.py")}"'
-    run_cmd3 += f' "{trash_path}"'
-    run_cmd3 += f' "{fixed_path}"'
-    run_cmd3 += f' "{output_folder}"'
-
-    def check_progress(process):
-        count = 0
-        while True:
-            output = process.stdout.readline().decode()
-            log.info(output)
-
-            pattern = r'\[DONE\] (\d+)'
-            match = re.search(pattern, output)
-            if match:
-                count = int(match.group(1))
-                if count > 0:
-                    log.info(f"[DONE] Detected faces: {count}")
-                else:
-                    log.error("No faces detected!")
-
-            if process.poll() is not None:
-                break
-            time.sleep(0.5)
-            yield None
-        yield count
+    # trash_path = f"{input_folder}/../{repeat}_{face_type}_trash"
+    # fixed_path = f"{input_folder}/../{repeat}_{face_type}_fix"
+    # run_cmd3 = f'accelerate launch "{os.path.join("DeblurGANv2", "predict.py")}"'
+    # run_cmd3 += f' "{trash_path}"'
+    # run_cmd3 += f' "{fixed_path}"'
+    # run_cmd3 += f' "{output_folder}"'
 
     def output():
         images = list(Path(output_folder).glob('*'))
@@ -273,28 +250,8 @@ def process_images(
             gr.update(value=f"`Face detection done, {face_type}`"),
         ]
 
-    # if os.name == 'posix':
-    #     os.system(run_cmd)
-    #     os.system(run_cmd2)
-    #     return output()
-    # else:
-    if api_call:
-        with open(f"{lora_config_json['output_dir']}/log.txt", 'a') as f:
-            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
-            subprocess.run(run_cmd2, stdout=f, stderr=subprocess.STDOUT, shell=True)
-            subprocess.run(run_cmd3, stdout=f, stderr=subprocess.STDOUT, shell=True)
-    else:
-        subprocess.run(run_cmd, shell=True)
-        subprocess.run(run_cmd2, shell=True)
-        subprocess.run(run_cmd3, shell=True)
+    run_cmd_with_log(run_cmd, api_call, f"{lora_config_json['output_dir']}/log.txt")
 
-    # process = subprocess.Popen(
-    #     run_cmd,
-    #     stdout=subprocess.PIPE,
-    #     stderr=subprocess.PIPE
-    # )
-    # for _ in progress.tqdm(check_progress(), desc="Processing"):
-    #     pass
     return output()
 
 
