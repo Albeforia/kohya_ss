@@ -313,7 +313,15 @@ def _add_pre_postfix(
 def random_pick_image_and_flip(train_data_dir):
     flip_folder = '10_flip'
     tmp_dir = f'{train_data_dir}/../{flip_folder}'
+    target_dir = f'{train_data_dir}/{flip_folder}'
     os.makedirs(tmp_dir, exist_ok=True)
+
+    if os.path.exists(target_dir):
+        for file_name in os.listdir(target_dir):
+            file_path = os.path.join(target_dir, file_name)
+            os.unlink(file_path)
+    else:
+        os.makedirs(target_dir)
 
     for subdir, dirs, files in os.walk(train_data_dir):
         # skip 'head' dataset
@@ -329,7 +337,7 @@ def random_pick_image_and_flip(train_data_dir):
         img_flipped = img.transpose(Image.FLIP_LEFT_RIGHT)
         img_flipped.save(image_path)
 
-    shutil.move(tmp_dir, f'{train_data_dir}/{flip_folder}')
+    shutil.move(tmp_dir, target_dir)
 
 
 def caption_images(
@@ -369,15 +377,7 @@ def caption_images(
 
     random_pick_image_and_flip(train_data_dir)
 
-    # Run the command
-    # if os.name == 'posix':
-    #     os.system(run_cmd)
-    # else:
-    if api_call:
-        with open(f"{train_data_dir}/../output/log.txt", 'a') as f:
-            subprocess.run(run_cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
-    else:
-        subprocess.run(run_cmd, shell=True)
+    run_cmd_with_log(run_cmd, api_call, f"{train_data_dir}/../output/log.txt")
 
     # Add prefix and postfix
     _add_pre_postfix(
