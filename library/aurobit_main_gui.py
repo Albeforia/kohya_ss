@@ -315,13 +315,9 @@ def random_pick_image_and_flip(train_data_dir):
     tmp_dir = f'{train_data_dir}/../{flip_folder}'
     target_dir = f'{train_data_dir}/{flip_folder}'
     os.makedirs(tmp_dir, exist_ok=True)
-
     if os.path.exists(target_dir):
-        for file_name in os.listdir(target_dir):
-            file_path = os.path.join(target_dir, file_name)
-            os.unlink(file_path)
-    else:
-        os.makedirs(target_dir)
+        shutil.rmtree(target_dir)
+        # os.makedirs(target_dir)
 
     for subdir, dirs, files in os.walk(train_data_dir):
         # skip 'head' dataset
@@ -337,7 +333,7 @@ def random_pick_image_and_flip(train_data_dir):
         img_flipped = img.transpose(Image.FLIP_LEFT_RIGHT)
         img_flipped.save(image_path)
 
-    shutil.move(tmp_dir, target_dir)
+    os.rename(tmp_dir, target_dir)
 
 
 def caption_images(
