@@ -34,6 +34,9 @@ scikit-image==0.21.0
 colorama==0.4.6
 pretrainedmodels
 deepface
+#insightface
+#gfpgan
+#onnxruntime
 imageio-ffmpeg
 -r Matting/requirements.txt
 # for kohya_ss library
