@@ -61,6 +61,15 @@ def on_images_uploaded_simple(files):
     return output_folder
 
 
+def compute_max_epochs(N):
+    if N <= 20:
+        return 10
+    elif 20 < N <= 40:
+        return 10 + (N - 20) // 2
+    else:
+        return 20
+
+
 def on_images_uploaded(
         files,
         auto_matting,
@@ -96,6 +105,8 @@ def on_images_uploaded(
     for invalid_img in invalid_images:
         os.remove(invalid_img)
 
+    max_epochs = compute_max_epochs(len(detected_faces))
+
     if auto_upscale:
         to_upscale = set()
         for face_data in detected_faces:
@@ -128,6 +139,7 @@ def on_images_uploaded(
     lora_config_json.update({'output_dir': f"{final_output_folder}"})
     lora_config_json.update({'logging_dir': os.path.join(final_output_folder, 'train_log')})
     lora_config_json.update({'pretrained_model_name_or_path': basemodel_profile['path']})
+    lora_config_json.update({'epoch': max_epochs})
     with open(config_file_path, 'w') as json_file:
         json.dump(lora_config_json, json_file)  # save to file
 
