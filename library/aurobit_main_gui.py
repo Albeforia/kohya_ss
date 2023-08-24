@@ -91,6 +91,10 @@ def on_images_uploaded(
         j = json.load(f)
         detected_faces = j['faces']
         analysis_result = j['stats']
+        invalid_images = j['invalid']
+
+    for invalid_img in invalid_images:
+        os.remove(invalid_img)
 
     if auto_upscale:
         to_upscale = set()

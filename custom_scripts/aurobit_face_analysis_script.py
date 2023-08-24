@@ -84,23 +84,29 @@ def _analyze_face_data(face_data):
 def gather_face_info(input_path):
     files = _get_image_file_paths(input_path)
     result = []
+    invalid_result = []
     for img in files:
-        face_data = _parse_analysis_result(
-            DeepFace.analyze(img, ('race', 'gender'), enforce_detection=False, detector_backend='retinaface'))
-        if not face_data:
-            continue
-        face_data['source'] = img
-        result.append(face_data)
+        try:
+            face_data = _parse_analysis_result(
+                DeepFace.analyze(img, ('race', 'gender'), detector_backend='retinaface'))
+            if not face_data:
+                continue
+            face_data['source'] = img
+            result.append(face_data)
+        except ValueError:
+            print(f"No face detected in {img}")
+            invalid_result.append(img)
 
-    return (result, _analyze_face_data(result))
+    return result, _analyze_face_data(result), invalid_result
 
 
 def main(args):
-    results, stats = gather_face_info(args.input_path)
+    results, stats, invalid = gather_face_info(args.input_path)
     with open(f'{args.output_path}/faces.txt', 'w') as f:
         f.write(json.dumps({
             'faces': results,
-            'stats': stats
+            'stats': stats,
+            'invalid': invalid
         }))
 
 
