@@ -37,6 +37,7 @@ deepface
 #insightface
 #gfpgan
 #onnxruntime
+lpips
 imageio-ffmpeg
 -r Matting/requirements.txt
 # for kohya_ss library

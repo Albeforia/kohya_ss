@@ -1,3 +1,4 @@
+import datetime
 import os
 import subprocess
 
@@ -35,6 +36,40 @@ def submit_real_esrgan(image_path, scale_opt):
     return gr.update(value=None)
 
 
+def submit_codeformer(image_path,
+                      cf_weight,
+                      cf_face_aligned,
+                      cf_face_upscale,
+                      cf_bg_upscale):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', 'upscale', 'codeformer', current_time)
+    os.makedirs(output_folder, exist_ok=True)
+
+    final_scale = 1
+    if cf_face_upscale or cf_bg_upscale:
+        final_scale = 2
+
+    run_cmd = f'accelerate launch "{os.path.join("CodeFormer", "inference_codeformer.py")}"'
+    run_cmd += f' "--input_path={image_path}"'
+    run_cmd += f' "--output_path={output_folder}"'
+    run_cmd += f' "--fidelity_weight={cf_weight}"'
+    run_cmd += f' "--upscale={final_scale}"'
+    if cf_face_aligned:
+        run_cmd += f' "--has_aligned"'
+    if cf_bg_upscale:
+        run_cmd += f' "--bg_upsampler=realesrgan"'
+    if cf_face_upscale:
+        run_cmd += f' "--face_upsample"'
+
+    p = subprocess.run(run_cmd, shell=True)
+    if p.returncode == 0:
+        final_folder = os.path.abspath(os.path.join(output_folder, 'final_results'))
+        result = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))][0]
+        return gr.update(value=os.path.join(final_folder, result))
+
+    return gr.update(value=None)
+
+
 def _upscale_api(image_path, scale_opt):
     output_folder = os.path.join('_workspace', 'upscale', 'esrgan')
     os.makedirs(output_folder, exist_ok=True)
@@ -62,11 +97,11 @@ def _upscale_api(image_path, scale_opt):
 
 
 def gradio_aurobit_upscale_gui_tab(headless=False):
-    with gr.Tab('超分辨率'):
+    with gr.Tab('高清化'):
         with gr.Accordion('Real-ESRGAN'):
             with gr.Row():
-                image_a = gr.Image(type='filepath', label='input')
-                image_b = gr.Image(type='filepath', interactive=False, label='output')
+                image_esrgan = gr.Image(type='filepath', label='input')
+                image_esrgan_out = gr.Image(type='filepath', interactive=False, label='output')
 
             with gr.Row():
                 scale_opt0 = gr.Radio(['2x', '4x', '8x'], show_label=False, value='2x')
@@ -77,11 +112,52 @@ def gradio_aurobit_upscale_gui_tab(headless=False):
         submit_btn0.click(
             submit_real_esrgan,
             inputs=[
-                image_a,
+                image_esrgan,
                 scale_opt0,
             ],
             outputs=[
-                image_b
+                image_esrgan_out
+            ],
+        )
+
+        with gr.Accordion('CodeFormer'):
+            with gr.Row():
+                image_cf = gr.Image(type='filepath', label='input')
+                image_cf_out = gr.Image(type='filepath', interactive=False, label='output')
+
+            with gr.Row():
+                cf_weight = gr.Slider(label='Fidelity weight', value=0.7, minimum=0, maximum=1, step=0.05,
+                                      info='Balance the quality and fidelity')
+                cf_face_aligned = gr.Checkbox(label='Aligned', info='Input are cropped and aligned faces')
+                cf_face_upscale = gr.Checkbox(label='Upscale face')
+                cf_bg_upscale = gr.Checkbox(label='Upscale background')
+            with gr.Row():
+                submit_btn1 = gr.Button(
+                    'Submit', variant='primary'
+                )
+
+        submit_btn0.click(
+            submit_real_esrgan,
+            inputs=[
+                image_esrgan,
+                scale_opt0,
+            ],
+            outputs=[
+                image_esrgan_out
+            ],
+        )
+
+        submit_btn1.click(
+            submit_codeformer,
+            inputs=[
+                image_cf,
+                cf_weight,
+                cf_face_aligned,
+                cf_face_upscale,
+                cf_bg_upscale,
+            ],
+            outputs=[
+                image_cf_out
             ],
         )
 
