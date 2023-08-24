@@ -63,7 +63,8 @@ def submit_codeformer(image_path,
 
     p = subprocess.run(run_cmd, shell=True)
     if p.returncode == 0:
-        final_folder = os.path.abspath(os.path.join(output_folder, 'final_results'))
+        final_folder = 'final_results' if not cf_face_aligned else 'restored_faces'
+        final_folder = os.path.abspath(os.path.join(output_folder, final_folder))
         result = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))][0]
         return gr.update(value=os.path.join(final_folder, result))
 
