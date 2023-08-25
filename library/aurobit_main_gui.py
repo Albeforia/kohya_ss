@@ -3,6 +3,7 @@ import json
 import math
 import os
 import random
+import re
 import shutil
 import subprocess
 import traceback
@@ -385,8 +386,6 @@ def caption_images(
         run_cmd += f' --undesired_tags="{undesired_tags}"'
     run_cmd += f' "{train_data_dir}"'
 
-    log.info(run_cmd)
-
     random_pick_image_and_flip(train_data_dir)
 
     run_cmd_with_log(run_cmd, api_call, f"{train_data_dir}/../output/log.txt")
@@ -532,6 +531,46 @@ def show_lora_files(lora_config_json):
     return show_lora_files_(lora_config_json['output_dir'], lora_config_json['save_model_as'])
 
 
+def check_lora_losses(lora_config_json):
+    files = get_file_paths(lora_config_json['output_dir'])
+    filtered_files = []
+    for f in files:
+        if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
+            filtered_files.append(os.path.abspath(f))
+
+    max_epoch = lora_config_json['epoch']
+    need_retrain = True
+    min_loss = 1
+    max_loss = 0
+    for file in filtered_files[-3:]:
+        basename = os.path.basename(file)
+        match = re.match(r'last_epoch(\d+)_loss(0\.\d+)\.safetensors', basename)
+        if match:
+            # epoch = int(match.group(1))
+            loss = float(match.group(2))
+            min_loss = min(min_loss, loss)
+            max_loss = max(max_loss, loss)
+            if loss >= 0.08 and loss <= 0.09:
+                need_retrain = False
+
+    log.info(f"Min loss of last 3 epoch {min_loss}")
+    log.info(f"Max loss of last 3 epoch {max_loss}")
+    if need_retrain:
+        te_lr = lora_config_json['text_encoder_lr']
+        unet_lr = lora_config_json['unet_lr']
+        if max_loss < 0.08:
+            log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 0.5}, {unet_lr * 0.5}]")
+            lora_config_json['text_encoder_lr'] = te_lr * 0.5
+            lora_config_json['unet_lr'] = unet_lr * 0.5
+        elif min_loss > 0.09:
+            log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 2}, {unet_lr * 2}]")
+            lora_config_json['text_encoder_lr'] = te_lr * 2
+            lora_config_json['unet_lr'] = unet_lr * 2
+        return True, filtered_files
+
+    return False, filtered_files
+
+
 def _train_api(input_folder, model_path, trigger_words):
     uploaded_files = get_file_paths(input_folder)
 
@@ -564,6 +603,14 @@ def _train_api(input_folder, model_path, trigger_words):
         config.pop('stop_text_encoder_training', None)
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
+
+        retrain, files = check_lora_losses(config)
+        if retrain:
+            old_dir = os.path.join(config['output_dir'], 'old')
+            os.makedirs(old_dir, exist_ok=True)
+            for f in files:
+                shutil.move(f, old_dir)
+            train_model(headless=True, print_only=False, **config)
 
         return os.path.abspath(config['output_dir'])
     except Exception as e:
