@@ -539,15 +539,18 @@ def check_lora_losses(lora_config_json):
             filtered_files.append(os.path.abspath(f))
 
     max_epoch = lora_config_json['epoch']
+    epoch_range = [max_epoch, max_epoch - 1, max_epoch - 2]
     need_retrain = True
     min_loss = 1
     max_loss = 0
-    for file in filtered_files[-3:]:
+    for file in filtered_files:
         basename = os.path.basename(file)
         match = re.match(r'last_epoch(\d+)_loss(0\.\d+)\.safetensors', basename)
         if match:
-            # epoch = int(match.group(1))
+            epoch = int(match.group(1))
             loss = float(match.group(2))
+            if epoch not in epoch_range:
+                continue
             min_loss = min(min_loss, loss)
             max_loss = max(max_loss, loss)
             if loss >= 0.08 and loss <= 0.09:
