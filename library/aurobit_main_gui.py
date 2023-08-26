@@ -103,14 +103,17 @@ def on_images_uploaded(
         analysis_result = j['stats']
         invalid_images = j['invalid']
 
+    # Delete invalid images
     for invalid_img in invalid_images:
         os.remove(invalid_img)
 
+    # Compute training epochs according to faces count
     max_epochs = compute_max_epochs(len(detected_faces))
 
     if auto_upscale:
         to_upscale = set()
         for face_data in detected_faces:
+            # TODO Hard-coded threshold
             if max(face_data['size']) < 225:
                 to_upscale.add(face_data['source'])
 
@@ -118,11 +121,21 @@ def on_images_uploaded(
         os.makedirs(tmp_folder, exist_ok=True)
         for f in to_upscale:
             shutil.move(f, tmp_folder)
-        run_cmdx = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
+        # run_cmdx = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
+        # run_cmdx += f' "--input_path={tmp_folder}"'
+        # run_cmdx += f' "--scale=2"'
+        # run_cmdx += f' "--output_path={output_folder}"'
+        # Use codeformer instead (slower)
+        run_cmdx = f'accelerate launch "{os.path.join("CodeFormer", "inference_codeformer.py")}"'
         run_cmdx += f' "--input_path={tmp_folder}"'
-        run_cmdx += f' "--scale=2"'
-        run_cmdx += f' "--output_path={output_folder}"'
+        run_cmdx += f' "--fidelity_weight=0.85"'
+        run_cmdx += f' "--output_path={tmp_folder}"'
+        run_cmdx += f' "--bg_upsampler=realesrgan"'
+        run_cmdx += f' "--face_upsample"'
         run_cmd_with_log(run_cmdx, api_call, log_file)
+        for f in os.listdir(os.path.join(tmp_folder, 'final_results')):
+            shutil.move(os.path.join(tmp_folder, 'final_results', f), output_folder)
+        # shutil.rmtree(tmp_folder)
 
     # Update folders for lora config
     with open('training_profile.json') as f:
