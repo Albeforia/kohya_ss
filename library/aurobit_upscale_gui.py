@@ -30,9 +30,9 @@ def upscale_real_esrgan(image_path, scale_opt):
     if p.returncode == 0:
         results = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
         if len(results) == 1:  # Single image
-            return os.path.join(output_folder, results[0])
+            return os.path.abspath(os.path.join(output_folder, results[0]))
         else:
-            return output_folder
+            return os.path.abspath(output_folder)
 
     return None
 
@@ -72,9 +72,9 @@ def upscale_codeformer(image_path,
         final_folder = os.path.abspath(os.path.join(output_folder, final_folder))
         results = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))]
         if len(results) == 1:  # Single image
-            return os.path.join(final_folder, results[0])
+            return os.path.abspath(os.path.join(final_folder, results[0]))
         else:
-            return final_folder
+            return os.path.abspath(final_folder)
 
     return None
 
