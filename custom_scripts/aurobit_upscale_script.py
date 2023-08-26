@@ -46,6 +46,7 @@ def main(args):
 
     # Download weights if not cached
     model.load_weights(model_name, download=True)
+    print(f'Predict using {model_name}')
 
     if os.path.isdir(args.input_path):
         files = _get_image_file_paths(args.input_path)

@@ -11,7 +11,8 @@ log = setup_logging()
 
 
 def upscale_real_esrgan(image_path, scale_opt):
-    output_folder = os.path.join('_workspace', 'upscale', 'esrgan')
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', 'upscale', 'esrgan', current_time)
     os.makedirs(output_folder, exist_ok=True)
 
     scale = 2
@@ -20,10 +21,6 @@ def upscale_real_esrgan(image_path, scale_opt):
     elif scale_opt == '8x':
         scale = 8
 
-    img_filename = os.path.basename(image_path)
-    fname, fext = os.path.splitext(img_filename)
-    sr_img_filename = f"{fname}_x{scale}{fext}"
-
     run_cmd = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
     run_cmd += f' "--input_path={image_path}"'
     run_cmd += f' "--scale={scale}"'
@@ -31,7 +28,11 @@ def upscale_real_esrgan(image_path, scale_opt):
 
     p = subprocess.run(run_cmd, shell=True)
     if p.returncode == 0:
-        return os.path.join(output_folder, sr_img_filename)
+        results = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
+        if len(results) == 1:  # Single image
+            return os.path.join(output_folder, results[0])
+        else:
+            return output_folder
 
     return None
 
@@ -69,8 +70,11 @@ def upscale_codeformer(image_path,
     if p.returncode == 0:
         final_folder = 'final_results' if not cf_face_aligned else 'restored_faces'
         final_folder = os.path.abspath(os.path.join(output_folder, final_folder))
-        result = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))][0]
-        return os.path.join(final_folder, result)
+        results = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))]
+        if len(results) == 1:  # Single image
+            return os.path.join(final_folder, results[0])
+        else:
+            return final_folder
 
     return None
 
@@ -88,7 +92,7 @@ def _upscale_api(image_path, method):
     if method_int == 0:
         return upscale_real_esrgan(image_path, '2x')
     elif method_int == 1:
-        return upscale_codeformer(image_path, 0.9, False, True, True)
+        return upscale_codeformer(image_path, 0.85, False, True, True)
     else:
         return upscale_real_esrgan(image_path, '2x')
 
