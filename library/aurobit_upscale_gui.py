@@ -10,7 +10,7 @@ from library.custom_logging import setup_logging
 log = setup_logging()
 
 
-def submit_real_esrgan(image_path, scale_opt):
+def upscale_real_esrgan(image_path, scale_opt):
     output_folder = os.path.join('_workspace', 'upscale', 'esrgan')
     os.makedirs(output_folder, exist_ok=True)
 
@@ -31,16 +31,20 @@ def submit_real_esrgan(image_path, scale_opt):
 
     p = subprocess.run(run_cmd, shell=True)
     if p.returncode == 0:
-        return gr.update(value=os.path.join(output_folder, sr_img_filename))
+        return os.path.join(output_folder, sr_img_filename)
 
-    return gr.update(value=None)
+    return None
 
 
-def submit_codeformer(image_path,
-                      cf_weight,
-                      cf_face_aligned,
-                      cf_face_upscale,
-                      cf_bg_upscale):
+def submit_real_esrgan(image_path, scale_opt):
+    return gr.update(value=upscale_real_esrgan(image_path, scale_opt))
+
+
+def upscale_codeformer(image_path,
+                       cf_weight,
+                       cf_face_aligned,
+                       cf_face_upscale,
+                       cf_bg_upscale):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     output_folder = os.path.join('_workspace', 'upscale', 'codeformer', current_time)
     os.makedirs(output_folder, exist_ok=True)
@@ -66,35 +70,27 @@ def submit_codeformer(image_path,
         final_folder = 'final_results' if not cf_face_aligned else 'restored_faces'
         final_folder = os.path.abspath(os.path.join(output_folder, final_folder))
         result = [f for f in os.listdir(final_folder) if os.path.isfile(os.path.join(final_folder, f))][0]
-        return gr.update(value=os.path.join(final_folder, result))
-
-    return gr.update(value=None)
-
-
-def _upscale_api(image_path, scale_opt):
-    output_folder = os.path.join('_workspace', 'upscale', 'esrgan')
-    os.makedirs(output_folder, exist_ok=True)
-
-    scale = 2
-    if scale_opt == '4x':
-        scale = 4
-    elif scale_opt == '8x':
-        scale = 8
-
-    img_filename = os.path.basename(image_path)
-    fname, fext = os.path.splitext(img_filename)
-    sr_img_filename = f"{fname}_x{scale}{fext}"
-
-    run_cmd = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
-    run_cmd += f' "--input_path={image_path}"'
-    run_cmd += f' "--scale={scale}"'
-    run_cmd += f' "--output_path={output_folder}"'
-
-    p = subprocess.run(run_cmd, shell=True)
-    if p.returncode == 0:
-        return os.path.abspath(os.path.join(output_folder, sr_img_filename))
+        return os.path.join(final_folder, result)
 
     return None
+
+
+def submit_codeformer(image_path,
+                      cf_weight,
+                      cf_face_aligned,
+                      cf_face_upscale,
+                      cf_bg_upscale):
+    return gr.update(value=upscale_codeformer(image_path, cf_weight, cf_face_aligned, cf_face_upscale, cf_bg_upscale))
+
+
+def _upscale_api(image_path, method):
+    method_int = int(method)
+    if method_int == 0:
+        return upscale_real_esrgan(image_path, '2x')
+    elif method_int == 1:
+        return upscale_codeformer(image_path, 0.9, False, True, True)
+    else:
+        return upscale_real_esrgan(image_path, '2x')
 
 
 def gradio_aurobit_upscale_gui_tab(headless=False):
@@ -165,11 +161,11 @@ def gradio_aurobit_upscale_gui_tab(headless=False):
         # API
         api_only_image_path = gr.Textbox('', visible=False)
         api_only_output_path = gr.Textbox('', visible=False)
-        api_only_scale = gr.Textbox('', visible=False)
+        api_only_method = gr.Textbox('', visible=False)
         api_only_upscale = gr.Button('', visible=False)
         api_only_upscale.click(
             _upscale_api,
-            inputs=[api_only_image_path, api_only_scale],
+            inputs=[api_only_image_path, api_only_method],
             outputs=[api_only_output_path],
-            api_name='upscale_esrgan'
+            api_name='upscale'
         )
