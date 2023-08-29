@@ -41,6 +41,9 @@ RUN python3 -m pip uninstall -y opencv-python && \
 RUN python3 -m pip uninstall -y pillow && \
     CC="cc -mavx2" python3 -m pip install -U --force-reinstall pillow-simd
 
+# Upgrade requests lib to fix a warning
+RUN python3 -m pip install --upgrade requests
+
 # Fix missing libnvinfer7
 USER root
 RUN ln -s /usr/lib/x86_64-linux-gnu/libnvinfer.so /usr/lib/x86_64-linux-gnu/libnvinfer.so.7 && \
