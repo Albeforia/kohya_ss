@@ -26,10 +26,16 @@ RUN python3 -m pip install wheel
 ## RUN python3 -m pip install -v -U git+https://github.com/facebookresearch/xformers.git@main#egg=xformers
 
 # Install requirements
-COPY ./requirements.txt ./requirements_linux_docker.txt ./
 COPY ./setup/docker_setup.py ./setup.py
+COPY ./requirements_linux_docker.txt ./
 RUN python3 -m pip install -r ./requirements_linux_docker.txt
+COPY ./requirements.txt ./
+COPY ./Matting/requirements.txt ./Matting/requirements.txt
 RUN python3 -m pip install -r ./requirements.txt
+
+# https://github.com/NVIDIA/nvidia-container-toolkit/issues/103
+RUN python3 -m pip uninstall -y opencv-python && \
+    python3 -m pip install opencv-python==4.8.0.74
 
 # Replace pillow with pillow-simd
 RUN python3 -m pip uninstall -y pillow && \

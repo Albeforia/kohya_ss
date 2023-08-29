@@ -5,3 +5,14 @@ bitsandbytes_windows_deprecated/
 dataset/
 __pycache__/
 venv/
+
+.git
+.github
+.idea
+.vscode
+_workspace
+logs
+SmilingWolf
+weights
+CodeFormer/weights
+DeblurGANv2

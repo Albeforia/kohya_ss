@@ -1,5 +1,5 @@
 paddlepaddle-gpu>=2.5.0 --index-url https://mirror.baidu.com/pypi/simple
-paddleseg
+paddleseg==2.8.0
 pymatting
 scikit-image
 numba
