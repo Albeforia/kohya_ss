@@ -23,7 +23,7 @@ def _parse_analysis_result(result):
         print("No face detected in the image.")
         return None
 
-    first_face = result[0]
+    first_face = result
     width = first_face['region']['w']
     height = first_face['region']['h']
     man_prob = first_face['gender']['Man']
@@ -87,12 +87,13 @@ def gather_face_info(input_path):
     invalid_result = []
     for img in files:
         try:
-            face_data = _parse_analysis_result(
-                DeepFace.analyze(img, 'gender', detector_backend='retinaface'))
-            if not face_data:
-                continue
-            face_data['source'] = img
-            result.append(face_data)
+            faces = DeepFace.analyze(img, 'gender', detector_backend='retinaface')
+            for face in faces:
+                face_data = _parse_analysis_result(face)
+                if not face_data:
+                    continue
+                face_data['source'] = img
+                result.append(face_data)
         except ValueError:
             print(f"No face detected in {img}")
             invalid_result.append(img)
