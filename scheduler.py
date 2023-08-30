@@ -208,9 +208,9 @@ def upload_trained_files(output_path, user_id, task_id, setting):
     uploaded = []
     uploaded_local = []
     for loss_range in loss_ranges:
-        if len(uploaded) >= 4:
-            break
         for file in files:
+            if len(uploaded) >= 4:
+                break
             if file in uploaded_local:
                 continue
             basename = os.path.basename(file)
