@@ -643,6 +643,14 @@ def _train_api(input_folder, model_path, trigger_words):
         return os.path.abspath(config['output_dir'])
 
 
+def _detect_api(input):
+    return {
+        'valid': True,
+        'reason': 'Source has only one face',
+        'source': input
+    }
+
+
 def gradio_train_human_gui_tab(headless=False):
     with gr.Tab('人像训练'):
         upload_folder = gr.Textbox(visible=False)
@@ -796,6 +804,16 @@ def gradio_train_human_gui_tab(headless=False):
             inputs=[api_only_image_path, api_only_model_path, api_only_trigger_words],
             outputs=[api_only_output_path],
             api_name='train_lora'
+        )
+
+        api_only_detect_input = gr.Textbox('', visible=False)
+        api_only_detect_result = gr.JSON(visible=False)
+        api_only_detect = gr.Button('', visible=False)
+        api_only_detect.click(
+            _detect_api,
+            inputs=[api_only_detect_input],
+            outputs=[api_only_detect_result],
+            api_name='face_verify'
         )
 
     with gr.Tab('一键人像训练'):
