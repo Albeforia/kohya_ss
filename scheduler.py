@@ -458,8 +458,12 @@ def start_consumer(args):
                                  consumer, collection, collection_result, setting)
 
     while True:
-        schedule.run_pending()
-        time.sleep(0.5)
+        try:
+            schedule.run_pending()
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"[ERROR] {e}")
+            # TODO warning failure
 
 
 if __name__ == "__main__":
