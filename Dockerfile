@@ -58,4 +58,4 @@ STOPSIGNAL SIGINT
 ENV LD_PRELOAD=libtcmalloc.so
 ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION=python
 ENV PATH="$PATH:/home/appuser/.local/bin"
-CMD python3 "./kohya_gui.py" ${CLI_ARGS} --listen 0.0.0.0 --server_port 7860
+CMD python3 "./kohya_gui.py" ${CLI_ARGS} --listen 0.0.0.0 --server_port 7860 --async_start

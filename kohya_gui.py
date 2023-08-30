@@ -97,9 +97,21 @@ def UI(**kwargs):
         launch_kwargs['inbrowser'] = inbrowser
     if share:
         launch_kwargs['share'] = share
+
+    is_async = kwargs.get('async_start', False)
+    if is_async:
+        launch_kwargs['prevent_thread_lock'] = True
     # FIXME When queue is enabled, we have to turn off the network proxy otherwise everything is irresponsible
     # https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/9074
     interface.launch(**launch_kwargs)
+
+    if is_async:
+        try:
+            while True:
+                pass  # TODO
+        except KeyboardInterrupt:
+            log.info("Stopping by KeyboardInterrupt")
+            interface.close()
 
 
 if __name__ == '__main__':
@@ -132,6 +144,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--headless', action='store_true', help='Is the server headless'
     )
+    parser.add_argument(
+        '--async_start', action='store_true', help='Server will not block the main thread'
+    )
 
     args = parser.parse_args()
 
@@ -143,4 +158,5 @@ if __name__ == '__main__':
         share=args.share,
         listen=args.listen,
         headless=args.headless,
+        async_start=args.async_start
     )
