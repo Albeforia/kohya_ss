@@ -644,11 +644,51 @@ def _train_api(input_folder, model_path, trigger_words):
 
 
 def _detect_api(input):
-    return {
-        'valid': True,
-        'reason': 'Source has only one face',
-        'source': input
-    }
+    from scheduler import download_image
+    try:
+        with open('scheduler_settings/object_store.json') as f:
+            obj_store_setting = json.load(f)
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            download_folder = os.path.join('_workspace', 'verify', current_time)
+            os.makedirs(download_folder, exist_ok=True)
+            if not download_image(input, download_folder, 0, obj_store_setting):
+                return {
+                    'valid': False,
+                    'reason': 'Cannot fetch image',
+                    'source': input
+                }
+
+            # Analysis
+            run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
+            run_cmd0 += f' "--input_path={download_folder}"'
+            run_cmd0 += f' "--output_path={download_folder}"'
+            run_cmd_with_log(run_cmd0, False, None)
+            with open(f'{download_folder}/faces.txt') as f:
+                j = json.load(f)
+                detected_faces = j['faces']
+                if len(detected_faces) == 0:
+                    return {
+                        'valid': False,
+                        'reason': 'No human face',
+                        'source': input
+                    }
+                elif len(detected_faces) > 1:
+                    return {
+                        'valid': False,
+                        'reason': 'Multiple faces',
+                        'source': input
+                    }
+            return {
+                'valid': True,
+                'reason': '',
+                'source': input
+            }
+    except Exception as e:
+        return {
+            'valid': False,
+            'reason': str(e),
+            'source': input
+        }
 
 
 def gradio_train_human_gui_tab(headless=False):

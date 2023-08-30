@@ -34,7 +34,7 @@ def _parse_analysis_result(result):
         # "age": int(first_face["age"]),
         "gender": dom_gender,
         "probability_radio": ratio,
-        "race": first_face["dominant_race"],
+        # "race": first_face["dominant_race"],
         "size": [width, height]
     }
 
@@ -66,17 +66,17 @@ def _analyze_face_data(face_data):
         print(f"By frequency: {most_common_gender}; by weight: {gender}")
 
     # Compute race ratio for the most common race
-    race_counter = Counter(face['race'] for face in face_data)
-    total_race_count = sum(race_counter.values())
-    most_common_race, most_common_race_count = race_counter.most_common(1)[0]
-    race_ratio = most_common_race_count / total_race_count
+    # race_counter = Counter(face['race'] for face in face_data)
+    # total_race_count = sum(race_counter.values())
+    # most_common_race, most_common_race_count = race_counter.most_common(1)[0]
+    # race_ratio = most_common_race_count / total_race_count
 
     return {
         "total_faces": len(face_data),
         # "average_age": average_age,
         "most_common_gender": gender,
         # "gender_ratio": gender_ratio,
-        "most_common_race": most_common_race,
+        # "most_common_race": most_common_race,
         # "race_ratio": race_ratio
     }
 
@@ -88,7 +88,7 @@ def gather_face_info(input_path):
     for img in files:
         try:
             face_data = _parse_analysis_result(
-                DeepFace.analyze(img, ('race', 'gender'), detector_backend='retinaface'))
+                DeepFace.analyze(img, 'gender', detector_backend='retinaface'))
             if not face_data:
                 continue
             face_data['source'] = img
