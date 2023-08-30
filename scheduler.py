@@ -68,6 +68,7 @@ def download_image(url, path, index, setting):
             Key=url,
             DestFilePath=local_file)
         convert_bytes(os.path.getsize(local_file), 'MB')
+        return True
     except CosClientError or CosServiceError as e:
         print(f"[download_image] Network error: {e}")
         return False
