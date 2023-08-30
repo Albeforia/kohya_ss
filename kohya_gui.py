@@ -107,8 +107,12 @@ def UI(**kwargs):
 
     if is_async:
         try:
-            while True:
-                pass  # TODO
+            from scheduler import start_consumer
+            args = {
+                'setting_file': kwargs.get('scheduler_setting', ''),
+                'obj_store_setting': 'scheduler_settings/object_store.json'
+            }
+            start_consumer(args)
         except KeyboardInterrupt:
             log.info("Stopping by KeyboardInterrupt")
             interface.close()
@@ -147,6 +151,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--async_start', action='store_true', help='Server will not block the main thread'
     )
+    parser.add_argument(
+        '--scheduler_setting', type=str, default=''
+    )
 
     args = parser.parse_args()
 
@@ -158,5 +165,6 @@ if __name__ == '__main__':
         share=args.share,
         listen=args.listen,
         headless=args.headless,
-        async_start=args.async_start
+        async_start=args.async_start,
+        scheduler_setting=args.scheduler_setting
     )

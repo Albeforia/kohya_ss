@@ -52,3 +52,5 @@ training_profile.json
 
 gfpgan
 weights
+
+scheduler_settings
