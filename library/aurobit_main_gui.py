@@ -552,6 +552,10 @@ def check_lora_losses(lora_config_json):
         if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
             filtered_files.append(os.path.abspath(f))
 
+    with open('training_profile.json') as f:
+        training_profile = json.load(f)
+        retrain_range = training_profile.get('_retrain_range', [0.08, 0.09])
+
     max_epoch = lora_config_json['epoch']
     epoch_range = [max_epoch, max_epoch - 1, max_epoch - 2]
     need_retrain = True
@@ -567,7 +571,7 @@ def check_lora_losses(lora_config_json):
                 continue
             min_loss = min(min_loss, loss)
             max_loss = max(max_loss, loss)
-            if loss >= 0.08 and loss <= 0.09:
+            if retrain_range[0] <= loss <= retrain_range[1]:
                 need_retrain = False
 
     log.info(f"Min loss of last 3 epoch {min_loss}")
