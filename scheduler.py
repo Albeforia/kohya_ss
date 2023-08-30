@@ -155,7 +155,7 @@ def highres_task(task_id, user_id, task_params, setting):
         # 从params中获取img字段，然后下载所有的图片
         img_url = task_params.get('img')
         if img_url is not None:
-            if not download_image(img_url, img_dir):
+            if not download_image(img_url, img_dir, 0, setting['obj_store']):
                 return failure('Cannot fetch images')
 
         files = os.listdir(img_dir)
@@ -415,14 +415,14 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
             print(f'Task {task_id} not found, pass')
 
 
-def start_consumer(args):
+def start_consumer(input_args):
     try:
-        if isinstance(args, dict):
-            arg1 = args['setting_file']
-            arg2 = args['obj_store_setting']
+        if isinstance(input_args, dict):
+            arg1 = input_args['setting_file']
+            arg2 = input_args['obj_store_setting']
         else:
-            arg1 = args.setting_file
-            arg2 = args.obj_store_setting
+            arg1 = input_args.setting_file
+            arg2 = input_args.obj_store_setting
         # Load setting
         with open(arg1) as f:
             setting = json.load(f)
