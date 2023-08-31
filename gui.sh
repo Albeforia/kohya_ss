@@ -66,7 +66,7 @@ else
 fi
 
 # Set the environment variable
-export LD_LIBRARY_PATH=./venv/lib
+export LD_LIBRARY_PATH=./venv/lib:$LD_LIBRARY_PATH
 # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#lazy-loading
 export CUDA_MODULE_LOADING=LAZY
 
