@@ -76,6 +76,7 @@ def UI(**kwargs):
         import xformers
         python_version = ".".join([str(x) for x in sys.version_info[0:3]])
         xformers_version = xformers.__version__
+        log.info(f"CUDA lazy loading: {os.environ.get('CUDA_MODULE_LOADING')}")
         htmlStr = f"""
         <html>
             <body>

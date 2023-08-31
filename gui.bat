@@ -10,6 +10,9 @@ python .\setup\check_local_modules.py --no_question
 call .\venv\Scripts\activate.bat
 set PATH=%PATH%;%~dp0venv\Lib\site-packages\torch\lib
 
+:: https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#lazy-loading
+set CUDA_MODULE_LOADING=LAZY
+
 :: Validate requirements
 python.exe .\setup\validate_requirements.py
 
