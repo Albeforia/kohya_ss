@@ -493,6 +493,9 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
 
 
 def load_lora_config(use_wandb=True, mode='female', path='presets/lora/user_presets/lora_config.json'):
+    if not os.path.exists(path):
+        return {}
+
     with open(path) as f:
         config = json.load(f)
 
