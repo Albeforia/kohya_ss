@@ -95,6 +95,7 @@ def on_images_uploaded(
     # Analysis
     run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
     run_cmd0 += f' "--input_path={output_folder}"'
+    run_cmd0 += f' "--detect_mode=retinaface"'
     run_cmd0 += f' "--output_path={final_output_folder}"'
     run_cmd_with_log(run_cmd0, api_call, log_file)
     with open(f'{final_output_folder}/faces.txt') as f:
@@ -661,6 +662,8 @@ def _detect_api(input):
             # Analysis
             run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
             run_cmd0 += f' "--input_path={download_folder}"'
+            run_cmd0 += f' "--detect_mode=retinaface"'
+            run_cmd0 += f' "--detect_only"'
             run_cmd0 += f' "--output_path={download_folder}"'
             run_cmd_with_log(run_cmd0, False, None)
             with open(f'{download_folder}/faces.txt') as f:
@@ -678,6 +681,15 @@ def _detect_api(input):
                         'reason': 'Multiple faces',
                         'source': input
                     }
+                else:
+                    fw = detected_faces[0]['region']['w']
+                    fh = detected_faces[0]['region']['h']
+                    if min(fw, fh) < 32:
+                        return {
+                            'valid': False,
+                            'reason': 'Face too small',
+                            'source': input
+                        }
             return {
                 'valid': True,
                 'reason': '',
