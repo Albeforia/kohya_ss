@@ -23,7 +23,8 @@ def _add_watermark(params, img):
     # text
     text = params['text']
     font = ImageFont.truetype(params['font'], params['font_size'])
-    text_width, text_height = draw_table.textsize(text, font=font)
+    # text_width, text_height = draw_table.textsize(text, font=font)
+    _, _, text_width, text_height = draw_table.textbbox((0, 0), text, font=font)
 
     # padding
     text_width = text_width * 2  # padding
