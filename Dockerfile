@@ -33,6 +33,9 @@ COPY ./requirements.txt ./
 COPY ./Matting/requirements.txt ./Matting/requirements.txt
 RUN python3 -m pip install -r ./requirements.txt
 
+COPY ./requirements_scheduler.txt ./requirements_scheduler.txt
+RUN python3 -m pip install -r ./requirements_scheduler.txt
+
 # https://github.com/NVIDIA/nvidia-container-toolkit/issues/103
 RUN python3 -m pip uninstall -y opencv-python && \
     python3 -m pip install opencv-python==4.8.0.74
