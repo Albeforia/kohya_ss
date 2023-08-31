@@ -71,10 +71,22 @@ def UI(**kwargs):
             with gr.Tab('README'):
                 gr.Markdown(README)
 
+        import sys
+        import torch
+        import xformers
+        python_version = ".".join([str(x) for x in sys.version_info[0:3]])
+        xformers_version = xformers.__version__
         htmlStr = f"""
         <html>
             <body>
                 <div class="ver-class">{release}</div>
+                <div class="ver-class">
+                python: <span title="{sys.version}">{python_version}</span>
+                &#x2000;•&#x2000;
+                torch: {getattr(torch, '__long_version__',torch.__version__)}
+                &#x2000;•&#x2000;
+                xformers: {xformers_version}
+                </div>
             </body>
         </html>
         """
