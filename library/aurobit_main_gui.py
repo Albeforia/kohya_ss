@@ -605,8 +605,8 @@ def _train_api(input_folder, model_path, trigger_words):
 
     try:
         train_folder, _, _ = \
-            process_images(work_folder, 'midfull_face', 512, 512, 10, 0, 1, {}, config, api_call=True)
-        process_images(work_folder, 'whole_face', 512, 512, 20, 0, 1, {}, config, api_call=True)
+            process_images(work_folder, 'midfull_face_no_align', 512, 512, 10, 0, 1, {}, config, api_call=True)
+        process_images(work_folder, 'whole_face_no_align', 512, 512, 20, 0, 1, {}, config, api_call=True)
         process_images(work_folder, 'head_no_align', 512, 768, 10, 0, 1, {}, config, api_call=True)
 
         # Caption
