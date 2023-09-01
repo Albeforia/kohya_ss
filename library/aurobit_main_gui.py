@@ -694,11 +694,11 @@ async def _detect_api(input):
     try:
         with open('scheduler_settings/object_store.json') as f:
             obj_store_setting = json.load(f)
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + str(random.randint(0, 1000))
             download_folder = os.path.join('_workspace', 'verify', current_time)
             os.makedirs(download_folder, exist_ok=True)
             start_time = timeit.default_timer()
-            if not download_image(input, download_folder, random.randint(0, 1000), obj_store_setting):
+            if not download_image(input, download_folder, 0, obj_store_setting):
                 return {
                     'valid': False,
                     'reason': 'Cannot fetch image',
