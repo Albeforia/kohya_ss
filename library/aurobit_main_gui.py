@@ -698,7 +698,7 @@ async def _detect_api(input):
             download_folder = os.path.join('_workspace', 'verify', current_time)
             os.makedirs(download_folder, exist_ok=True)
             start_time = timeit.default_timer()
-            if not download_image(input, download_folder, 0, obj_store_setting):
+            if not download_image(input, download_folder, random.randint(0, 1000), obj_store_setting):
                 return {
                     'valid': False,
                     'reason': 'Cannot fetch image',
