@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import traceback
+import asyncio
 from pathlib import Path
 
 import gradio as gr
@@ -647,8 +648,16 @@ def _train_api(input_folder, model_path, trigger_words):
         return os.path.abspath(config['output_dir'])
 
 
-def _detect_api(input):
+is_verifying = False
+
+
+async def _detect_api(input):
     from scheduler import download_image
+    global is_verifying
+    while is_verifying:
+        log.info('Waiting other verify tasks to finish...')
+        await asyncio.sleep(1)
+    is_verifying = True
     try:
         with open('scheduler_settings/object_store.json') as f:
             obj_store_setting = json.load(f)
@@ -704,6 +713,8 @@ def _detect_api(input):
             'reason': str(e),
             'source': input
         }
+    finally:
+        is_verifying = False
 
 
 def gradio_train_human_gui_tab(headless=False):
