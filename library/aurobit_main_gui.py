@@ -6,6 +6,7 @@ import random
 import re
 import shutil
 import subprocess
+import timeit
 import traceback
 import asyncio
 from pathlib import Path
@@ -24,6 +25,18 @@ log = setup_logging()
 
 
 # PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
+
+
+def _get_image_file_paths(directory):
+    image_file_paths = []
+    for file in os.listdir(directory):
+        full_file_path = os.path.join(directory, file)
+        if os.path.isfile(full_file_path):
+            # Check the file extension
+            _, ext = os.path.splitext(full_file_path)
+            if ext.lower() in ['.jpg', '.jpeg', '.png']:
+                image_file_paths.append(full_file_path)
+    return image_file_paths
 
 
 def run_cmd_with_log(cmd, api_call, log_file):
@@ -648,7 +661,27 @@ def _train_api(input_folder, model_path, trigger_words):
         return os.path.abspath(config['output_dir'])
 
 
+#----------------------------------------------------------------------
+from retinaface.RetinaFace import build_model, detect_faces
+
+
+face_model = build_model()
 is_verifying = False
+
+
+def _process_face_obj(obj):
+    resp = []
+    for face_idx in obj.keys():
+        identity = obj[face_idx]
+        facial_area = identity["facial_area"]
+        y = facial_area[1]
+        h = facial_area[3] - y
+        x = facial_area[0]
+        w = facial_area[2] - x
+        img_region = [x, y, w, h]
+        confidence = identity["score"]
+        resp.append((img_region, confidence))
+    return resp
 
 
 async def _detect_api(input):
@@ -664,44 +697,45 @@ async def _detect_api(input):
             current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
             download_folder = os.path.join('_workspace', 'verify', current_time)
             os.makedirs(download_folder, exist_ok=True)
+            start_time = timeit.default_timer()
             if not download_image(input, download_folder, 0, obj_store_setting):
                 return {
                     'valid': False,
                     'reason': 'Cannot fetch image',
                     'source': input
                 }
+            end_time = timeit.default_timer()
+            log.info(f"Download finished in {(end_time - start_time)*1000:.2f} ms")
 
-            # Analysis
-            run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
-            run_cmd0 += f' "--input_path={download_folder}"'
-            run_cmd0 += f' "--detect_mode=retinaface"'
-            run_cmd0 += f' "--detect_only"'
-            run_cmd0 += f' "--output_path={download_folder}"'
-            run_cmd_with_log(run_cmd0, False, None)
-            with open(f'{download_folder}/faces.txt') as f:
-                j = json.load(f)
-                detected_faces = j['faces']
-                if len(detected_faces) == 0:
+            start_time = timeit.default_timer()
+            files = _get_image_file_paths(download_folder)
+            detected_faces = _process_face_obj(detect_faces(files[0], 0.98, face_model))
+            end_time = timeit.default_timer()
+            log.info(f"Prediction finished in {(end_time - start_time)*1000:.2f} ms")
+
+            print(detected_faces)
+
+            if len(detected_faces) == 0:
+                return {
+                    'valid': False,
+                    'reason': 'No human face',
+                    'source': input
+                }
+            elif len(detected_faces) > 1:
+                return {
+                    'valid': False,
+                    'reason': 'Multiple faces',
+                    'source': input
+                }
+            else:
+                fw = detected_faces[0][0][2]
+                fh = detected_faces[0][0][3]
+                if min(fw, fh) < 64:
                     return {
                         'valid': False,
-                        'reason': 'No human face',
+                        'reason': 'Face too small',
                         'source': input
                     }
-                elif len(detected_faces) > 1:
-                    return {
-                        'valid': False,
-                        'reason': 'Multiple faces',
-                        'source': input
-                    }
-                else:
-                    fw = detected_faces[0]['region']['w']
-                    fh = detected_faces[0]['region']['h']
-                    if min(fw, fh) < 32:
-                        return {
-                            'valid': False,
-                            'reason': 'Face too small',
-                            'source': input
-                        }
             return {
                 'valid': True,
                 'reason': '',
@@ -715,6 +749,7 @@ async def _detect_api(input):
         }
     finally:
         is_verifying = False
+#----------------------------------------------------------------------
 
 
 def gradio_train_human_gui_tab(headless=False):
