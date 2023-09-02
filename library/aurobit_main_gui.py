@@ -611,6 +611,9 @@ def check_lora_losses(lora_config_json):
 
 
 def _train_api(input_folder, model_path, trigger_words):
+    if 'face_model' in globals():
+        del face_model  # release memory
+    
     uploaded_files = get_file_paths(input_folder)
 
     # Preprocess
