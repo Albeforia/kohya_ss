@@ -708,7 +708,7 @@ async def _detect_api(input):
         _init_tensorflow()
         tf_init = True
 
-    if not 'face_model' in globals():
+    if 'face_model' not in globals():
         face_model = build_model()
 
     while is_verifying:
