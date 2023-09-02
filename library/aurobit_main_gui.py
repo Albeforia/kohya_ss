@@ -685,6 +685,8 @@ def _init_tensorflow():
 
 def _process_face_obj(obj):
     resp = []
+    if not isinstance(obj, dict):
+        return resp
     for face_idx in obj.keys():
         identity = obj[face_idx]
         facial_area = identity["facial_area"]
