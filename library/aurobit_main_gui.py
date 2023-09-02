@@ -676,13 +676,10 @@ def _init_tensorflow():
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
         try:
-            # Currently, memory growth needs to be the same across GPUs
-            for gpu in gpus:
-                tf.config.experimental.set_memory_growth(gpu, True)
-            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            log.info(f'{len(gpus)} physical GPUs, {len(logical_gpus)} logical GPUs')
+            tf.config.experimental.set_virtual_device_configuration(
+                gpus[0],
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4000)])
         except RuntimeError as e:
-            # Memory growth must be set before GPUs have been initialized
             log.error(e)
 
 
