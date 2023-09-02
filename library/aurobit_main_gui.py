@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import json
 import math
@@ -8,7 +9,6 @@ import shutil
 import subprocess
 import timeit
 import traceback
-import asyncio
 from pathlib import Path
 
 import gradio as gr
@@ -661,11 +661,9 @@ def _train_api(input_folder, model_path, trigger_words):
         return os.path.abspath(config['output_dir'])
 
 
-#----------------------------------------------------------------------
+# ----------------------------------------------------------------------
 from retinaface.RetinaFace import build_model, detect_faces
 
-
-face_model = build_model()
 is_verifying = False
 
 
@@ -686,7 +684,12 @@ def _process_face_obj(obj):
 
 async def _detect_api(input):
     from scheduler import download_image
+    global face_model
     global is_verifying
+
+    if not 'face_model' in globals():
+        face_model = build_model()
+
     while is_verifying:
         log.info('Waiting other verify tasks to finish...')
         await asyncio.sleep(1)
@@ -705,13 +708,13 @@ async def _detect_api(input):
                     'source': input
                 }
             end_time = timeit.default_timer()
-            log.info(f"Download finished in {(end_time - start_time)*1000:.2f} ms")
+            log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
 
             start_time = timeit.default_timer()
             files = _get_image_file_paths(download_folder)
             detected_faces = _process_face_obj(detect_faces(files[0], 0.98, face_model))
             end_time = timeit.default_timer()
-            log.info(f"Prediction finished in {(end_time - start_time)*1000:.2f} ms")
+            log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
 
             print(detected_faces)
 
@@ -749,7 +752,9 @@ async def _detect_api(input):
         }
     finally:
         is_verifying = False
-#----------------------------------------------------------------------
+
+
+# ----------------------------------------------------------------------
 
 
 def gradio_train_human_gui_tab(headless=False):
