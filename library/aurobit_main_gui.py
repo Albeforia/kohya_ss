@@ -613,7 +613,7 @@ def check_lora_losses(lora_config_json):
 def _train_api(input_folder, model_path, trigger_words):
     if 'face_model' in globals():
         del face_model  # release memory
-    
+
     uploaded_files = get_file_paths(input_folder)
 
     # Preprocess
@@ -665,9 +665,25 @@ def _train_api(input_folder, model_path, trigger_words):
 
 
 # ----------------------------------------------------------------------
+import tensorflow as tf
 from retinaface.RetinaFace import build_model, detect_faces
 
+tf_init = False
 is_verifying = False
+
+
+def _init_tensorflow():
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            # Currently, memory growth needs to be the same across GPUs
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+            logical_gpus = tf.config.experimental.list_logical_devices('GPU')
+            log.info(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+        except RuntimeError as e:
+            # Memory growth must be set before GPUs have been initialized
+            log.error(e)
 
 
 def _process_face_obj(obj):
@@ -687,8 +703,13 @@ def _process_face_obj(obj):
 
 async def _detect_api(input):
     from scheduler import download_image
+    global tf_init
     global face_model
     global is_verifying
+
+    if not tf_init:
+        _init_tensorflow()
+        tf_init = True
 
     if not 'face_model' in globals():
         face_model = build_model()
