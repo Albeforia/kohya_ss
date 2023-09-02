@@ -680,7 +680,7 @@ def _init_tensorflow():
             for gpu in gpus:
                 tf.config.experimental.set_memory_growth(gpu, True)
             logical_gpus = tf.config.experimental.list_logical_devices('GPU')
-            log.info(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+            log.info(f'{len(gpus)} physical GPUs, {len(logical_gpus)} logical GPUs')
         except RuntimeError as e:
             # Memory growth must be set before GPUs have been initialized
             log.error(e)
