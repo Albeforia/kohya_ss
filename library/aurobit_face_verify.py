@@ -1,12 +1,14 @@
 import asyncio
 import datetime
 import json
+import math
 import os
 import random
 import sys
 import timeit
 
 import tensorflow as tf
+from PIL import Image
 from retinaface.RetinaFace import build_model, detect_faces
 
 from library.custom_logging import setup_logging
@@ -58,6 +60,47 @@ def _process_face_obj(obj):
     return resp
 
 
+def _judge_faces(detected_faces, local_file, input_file):
+    img = Image.open(local_file)
+
+    ratios = []
+    for face in detected_faces:
+        fw = face[0][2]
+        fh = face[0][3]
+        ratio = math.sqrt((fw * fh) / (img.size[0] * img.size[1]))
+        ratios.append(ratio)
+
+    print(ratios)
+
+    if len(detected_faces) == 0:
+        return {
+            'valid': False,
+            'reason': 'No human face',
+            'source': input_file
+        }
+    elif len(detected_faces) > 1:
+        max2 = sorted(ratios)[-2:]
+        if (max2[1] / max2[0]) < 1.5:
+            return {
+                'valid': False,
+                'reason': 'Multiple faces',
+                'source': input_file
+            }
+    else:
+        # Only one face
+        if ratios[0] < 0.25:
+            return {
+                'valid': False,
+                'reason': 'Face too small',
+                'source': input_file
+            }
+    return {
+        'valid': True,
+        'reason': '',
+        'source': input_file
+    }
+
+
 async def verify_face_api(input_file):
     from scheduler import download_image
     global tf_init
@@ -97,34 +140,8 @@ async def verify_face_api(input_file):
             end_time = timeit.default_timer()
             log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
 
-            print(detected_faces)
+            return _judge_faces(detected_faces, files[0], input_file)
 
-            if len(detected_faces) == 0:
-                return {
-                    'valid': False,
-                    'reason': 'No human face',
-                    'source': input_file
-                }
-            elif len(detected_faces) > 1:
-                return {
-                    'valid': False,
-                    'reason': 'Multiple faces',
-                    'source': input_file
-                }
-            else:
-                fw = detected_faces[0][0][2]
-                fh = detected_faces[0][0][3]
-                if min(fw, fh) < 64:
-                    return {
-                        'valid': False,
-                        'reason': 'Face too small',
-                        'source': input_file
-                    }
-            return {
-                'valid': True,
-                'reason': '',
-                'source': input_file
-            }
     except Exception as e:
         return {
             'valid': False,
@@ -139,6 +156,6 @@ if __name__ == "__main__":
     if len(sys.argv) >= 2:
         file_path = sys.argv[1]
         detected_faces = _process_face_obj(detect_faces(file_path, 0.98, build_model()))
-        print(detected_faces)
+        print(_judge_faces(detected_faces, file_path, file_path))
     else:
         pass
