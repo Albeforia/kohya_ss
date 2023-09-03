@@ -6,6 +6,7 @@ import re
 import shutil
 import subprocess
 import time
+import timeit
 import traceback
 from datetime import datetime
 
@@ -91,6 +92,7 @@ def lora_task(task_id, user_id, task_params, setting):
     os.makedirs(img_dir, exist_ok=True)
 
     try:
+        start_time = timeit.default_timer()
         # 从params中获取img字段，然后下载所有的图片
         img_url = task_params.get('frontImg')
         if img_url is not None:
@@ -102,9 +104,11 @@ def lora_task(task_id, user_id, task_params, setting):
                 return failure('Cannot fetch images')
 
         convert_webp_to_png(img_dir)
+        end_time = timeit.default_timer()
 
         num_files = len(os.listdir(img_dir))
         print(f'[{task_id}] Image downloading finished, total {num_files}')
+        print(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
         if num_files <= 0:
             return failure('No images')
 
@@ -152,15 +156,17 @@ def highres_task(task_id, user_id, task_params, setting):
     os.makedirs(img_dir, exist_ok=True)
 
     try:
+        start_time = timeit.default_timer()
         # 从params中获取img字段，然后下载所有的图片
         img_url = task_params.get('img')
         if img_url is not None:
             if not download_image(img_url, img_dir, 0, setting['obj_store']):
                 return failure('Cannot fetch images')
+        end_time = timeit.default_timer()
+        print(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
 
         files = os.listdir(img_dir)
         num_files = len(files)
-        print(f'[{task_id}] Image downloading finished, total {num_files}')
         if num_files <= 0:
             return failure('No images')
 
@@ -253,7 +259,10 @@ def upload_single_image(image_path, key, setting):
 
 
 def handle_lora_result(result, user_id, task_id, collection_result, webhook, setting):
+    start_time = timeit.default_timer()
     file_list = upload_trained_files(result['files'], user_id, task_id, setting['obj_store'])
+    end_time = timeit.default_timer()
+    print(f"Upload finished in {(end_time - start_time) * 1000:.2f} ms")
     collection_result.update_one(
         {'userId': user_id},
         {'$set': {
@@ -306,8 +315,11 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         highres_img = os.path.abspath(result['files'])
         highres_img_w = add_watermark(highres_img, os.path.dirname(highres_img))
         print(f"Found target image, will replace with a up-scaled version")
+        start_time = timeit.default_timer()
         upload_single_image(highres_img, target_img, setting['obj_store'])
         upload_single_image(highres_img_w, result_imgs_watermark[index]['img'], setting['obj_store'])
+        end_time = timeit.default_timer()
+        print(f"Upload finished in {(end_time - start_time) * 1000:.2f} ms")
         result_imgs_watermark[index]['hdFlag'] = True
     else:
         print('Cannot find the image to up-scale!')
