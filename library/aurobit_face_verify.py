@@ -1,0 +1,144 @@
+import asyncio
+import datetime
+import json
+import os
+import random
+import sys
+import timeit
+
+import tensorflow as tf
+from retinaface.RetinaFace import build_model, detect_faces
+
+from library.custom_logging import setup_logging
+
+# Set up logging
+log = setup_logging()
+
+tf_init = False
+is_verifying = False
+
+
+def _get_image_file_paths(directory):
+    image_file_paths = []
+    for file in os.listdir(directory):
+        full_file_path = os.path.join(directory, file)
+        if os.path.isfile(full_file_path):
+            # Check the file extension
+            _, ext = os.path.splitext(full_file_path)
+            if ext.lower() in ['.jpg', '.jpeg', '.png']:
+                image_file_paths.append(full_file_path)
+    return image_file_paths
+
+
+def _init_tensorflow():
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    if gpus:
+        try:
+            tf.config.experimental.set_virtual_device_configuration(
+                gpus[0],
+                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6500)])
+        except RuntimeError as e:
+            log.error(e)
+
+
+def _process_face_obj(obj):
+    resp = []
+    if not isinstance(obj, dict):
+        return resp
+    for face_idx in obj.keys():
+        identity = obj[face_idx]
+        facial_area = identity["facial_area"]
+        y = facial_area[1]
+        h = facial_area[3] - y
+        x = facial_area[0]
+        w = facial_area[2] - x
+        img_region = [x, y, w, h]
+        confidence = identity["score"]
+        resp.append((img_region, confidence))
+    return resp
+
+
+async def verify_face_api(input_file):
+    from scheduler import download_image
+    global tf_init
+    global face_model
+    global is_verifying
+
+    if not tf_init:
+        _init_tensorflow()
+        tf_init = True
+
+    if 'face_model' not in globals():
+        face_model = build_model()
+
+    while is_verifying:
+        log.info('Waiting other verify tasks to finish...')
+        await asyncio.sleep(1)
+    is_verifying = True
+    try:
+        with open('scheduler_settings/object_store.json') as f:
+            obj_store_setting = json.load(f)
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + str(random.randint(0, 1000))
+            download_folder = os.path.join('_workspace', 'verify', current_time)
+            os.makedirs(download_folder, exist_ok=True)
+            start_time = timeit.default_timer()
+            if not download_image(input_file, download_folder, 0, obj_store_setting):
+                return {
+                    'valid': False,
+                    'reason': 'Cannot fetch image',
+                    'source': input_file
+                }
+            end_time = timeit.default_timer()
+            log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
+
+            start_time = timeit.default_timer()
+            files = _get_image_file_paths(download_folder)
+            detected_faces = _process_face_obj(detect_faces(files[0], 0.98, face_model))
+            end_time = timeit.default_timer()
+            log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
+
+            print(detected_faces)
+
+            if len(detected_faces) == 0:
+                return {
+                    'valid': False,
+                    'reason': 'No human face',
+                    'source': input_file
+                }
+            elif len(detected_faces) > 1:
+                return {
+                    'valid': False,
+                    'reason': 'Multiple faces',
+                    'source': input_file
+                }
+            else:
+                fw = detected_faces[0][0][2]
+                fh = detected_faces[0][0][3]
+                if min(fw, fh) < 64:
+                    return {
+                        'valid': False,
+                        'reason': 'Face too small',
+                        'source': input_file
+                    }
+            return {
+                'valid': True,
+                'reason': '',
+                'source': input_file
+            }
+    except Exception as e:
+        return {
+            'valid': False,
+            'reason': str(e),
+            'source': input_file
+        }
+    finally:
+        is_verifying = False
+
+
+if __name__ == "__main__":
+    if len(sys.argv) >= 2:
+        file_path = sys.argv[1]
+        detected_faces = _process_face_obj(detect_faces(file_path, 0.98, build_model()))
+        print(detected_faces)
+    else:
+        pass

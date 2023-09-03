@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 import math
@@ -7,7 +6,6 @@ import random
 import re
 import shutil
 import subprocess
-import timeit
 import traceback
 from pathlib import Path
 
@@ -15,6 +13,7 @@ import gradio as gr
 from PIL import Image
 
 import library.train_util as train_util
+from library.aurobit_face_verify import verify_face_api
 from library.aurobit_upscale_gui import gradio_aurobit_upscale_gui_tab
 from library.aurobit_video_gui import gradio_aurobit_video_gui_tab
 from library.custom_logging import setup_logging
@@ -25,18 +24,6 @@ log = setup_logging()
 
 
 # PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
-
-
-def _get_image_file_paths(directory):
-    image_file_paths = []
-    for file in os.listdir(directory):
-        full_file_path = os.path.join(directory, file)
-        if os.path.isfile(full_file_path):
-            # Check the file extension
-            _, ext = os.path.splitext(full_file_path)
-            if ext.lower() in ['.jpg', '.jpeg', '.png']:
-                image_file_paths.append(full_file_path)
-    return image_file_paths
 
 
 def run_cmd_with_log(cmd, api_call, log_file):
@@ -611,9 +598,6 @@ def check_lora_losses(lora_config_json):
 
 
 def _train_api(input_folder, model_path, trigger_words):
-    if 'face_model' in globals():
-        del face_model  # release memory
-
     uploaded_files = get_file_paths(input_folder)
 
     # Preprocess
@@ -662,122 +646,6 @@ def _train_api(input_folder, model_path, trigger_words):
             f.write(stack)
 
         return os.path.abspath(config['output_dir'])
-
-
-# ----------------------------------------------------------------------
-import tensorflow as tf
-from retinaface.RetinaFace import build_model, detect_faces
-
-tf_init = False
-is_verifying = False
-
-
-def _init_tensorflow():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            tf.config.experimental.set_virtual_device_configuration(
-                gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=4000)])
-        except RuntimeError as e:
-            log.error(e)
-
-
-def _process_face_obj(obj):
-    resp = []
-    if not isinstance(obj, dict):
-        return resp
-    for face_idx in obj.keys():
-        identity = obj[face_idx]
-        facial_area = identity["facial_area"]
-        y = facial_area[1]
-        h = facial_area[3] - y
-        x = facial_area[0]
-        w = facial_area[2] - x
-        img_region = [x, y, w, h]
-        confidence = identity["score"]
-        resp.append((img_region, confidence))
-    return resp
-
-
-async def _detect_api(input):
-    from scheduler import download_image
-    global tf_init
-    global face_model
-    global is_verifying
-
-    if not tf_init:
-        _init_tensorflow()
-        tf_init = True
-
-    if 'face_model' not in globals():
-        face_model = build_model()
-
-    while is_verifying:
-        log.info('Waiting other verify tasks to finish...')
-        await asyncio.sleep(1)
-    is_verifying = True
-    try:
-        with open('scheduler_settings/object_store.json') as f:
-            obj_store_setting = json.load(f)
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + str(random.randint(0, 1000))
-            download_folder = os.path.join('_workspace', 'verify', current_time)
-            os.makedirs(download_folder, exist_ok=True)
-            start_time = timeit.default_timer()
-            if not download_image(input, download_folder, 0, obj_store_setting):
-                return {
-                    'valid': False,
-                    'reason': 'Cannot fetch image',
-                    'source': input
-                }
-            end_time = timeit.default_timer()
-            log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
-
-            start_time = timeit.default_timer()
-            files = _get_image_file_paths(download_folder)
-            detected_faces = _process_face_obj(detect_faces(files[0], 0.98, face_model))
-            end_time = timeit.default_timer()
-            log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
-
-            print(detected_faces)
-
-            if len(detected_faces) == 0:
-                return {
-                    'valid': False,
-                    'reason': 'No human face',
-                    'source': input
-                }
-            elif len(detected_faces) > 1:
-                return {
-                    'valid': False,
-                    'reason': 'Multiple faces',
-                    'source': input
-                }
-            else:
-                fw = detected_faces[0][0][2]
-                fh = detected_faces[0][0][3]
-                if min(fw, fh) < 64:
-                    return {
-                        'valid': False,
-                        'reason': 'Face too small',
-                        'source': input
-                    }
-            return {
-                'valid': True,
-                'reason': '',
-                'source': input
-            }
-    except Exception as e:
-        return {
-            'valid': False,
-            'reason': str(e),
-            'source': input
-        }
-    finally:
-        is_verifying = False
-
-
-# ----------------------------------------------------------------------
 
 
 def gradio_train_human_gui_tab(headless=False):
@@ -939,7 +807,7 @@ def gradio_train_human_gui_tab(headless=False):
         api_only_detect_result = gr.JSON(visible=False)
         api_only_detect = gr.Button('', visible=False)
         api_only_detect.click(
-            _detect_api,
+            verify_face_api,
             inputs=[api_only_detect_input],
             outputs=[api_only_detect_result],
             api_name='face_verify'
