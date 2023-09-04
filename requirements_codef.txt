@@ -1,0 +1,13 @@
+git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
+
+pytorch_lightning==2.0.2
+easydict==1.10
+
+ipdb==0.13.13
+
+PyYAML==6.0
+
+sk-video==1.1.10
+
+torch_optimizer==0.3.0
+kornia==0.5.10
