@@ -500,6 +500,11 @@ def load_lora_config(use_wandb=True, mode='female', path='presets/lora/user_pres
     with open(path) as f:
         config = json.load(f)
 
+        import torch
+        if not torch.cuda.is_bf16_supported():
+            config['mixed_precision'] = 'no'
+            config['save_precision'] = 'fp16'
+
         seed = config['seed']
         if not seed:
             seed = 2076
