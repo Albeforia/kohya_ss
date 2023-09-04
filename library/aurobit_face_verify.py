@@ -32,6 +32,15 @@ def _get_image_file_paths(directory):
     return image_file_paths
 
 
+def _convert_webp_to_png(directory):
+    for filename in os.listdir(directory):
+        if filename.endswith('.webp'):
+            img = Image.open(os.path.join(directory, filename))
+            png_filename = filename.rstrip('.webp') + '.png'
+            img.save(os.path.join(directory, png_filename), 'PNG')
+            os.remove(os.path.join(directory, filename))
+
+
 def _init_tensorflow():
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
@@ -135,6 +144,7 @@ async def verify_face_api(input_file):
             log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
 
             start_time = timeit.default_timer()
+            _convert_webp_to_png(download_folder)
             files = _get_image_file_paths(download_folder)
             detected_faces = _process_face_obj(detect_faces(files[0], 0.98, face_model))
             end_time = timeit.default_timer()
