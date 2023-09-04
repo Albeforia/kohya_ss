@@ -30,9 +30,10 @@ def run_cmd_with_log(cmd, api_call, log_file):
     log.info(cmd)
     if api_call:
         with open(log_file, 'a') as f:
-            subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
+            p = subprocess.run(cmd, stdout=f, stderr=subprocess.STDOUT, shell=True)
     else:
-        subprocess.run(cmd, shell=True)
+        p = subprocess.run(cmd, shell=True)
+    return p.returncode == 0
 
 
 def get_matting_cmd(from_folder, to_folder):
@@ -166,7 +167,10 @@ def on_images_uploaded(
         os.rename(output_folder, tmp_folder)
         os.makedirs(output_folder, exist_ok=True)
         run_cmd = get_matting_cmd(tmp_folder, output_folder)
-        run_cmd_with_log(run_cmd, api_call, log_file)
+        if not run_cmd_with_log(run_cmd, api_call, log_file):
+            log.warning("Matting failed! Background of images will not be removed")
+            # If matting failed, change folder name back
+            os.rename(tmp_folder, output_folder)
 
     return [
         output_folder,
