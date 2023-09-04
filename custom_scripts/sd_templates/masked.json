@@ -18,7 +18,6 @@
     "steps": 20,
     "cfg_scale": 7,
     "seed": -1,
-    "override_settings_restore_afterwards": false,
     "alwayson_scripts": {
       "controlnet": {
         "args": []

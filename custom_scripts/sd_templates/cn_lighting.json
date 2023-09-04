@@ -20,7 +20,6 @@
     "steps": 20,
     "cfg_scale": 7,
     "seed": -1,
-    "override_settings_restore_afterwards": false,
     "alwayson_scripts": {
       "controlnet": {
         "args": [
@@ -28,10 +27,6 @@
             "module": null,
             "model": "lightingBasedPicture_v10",
             "weight": 0.6,
-            "threshold_a": 0,
-            "resize_mode": 1,
-            "processor_res": 64,
-            "pixel_perfect": true,
             "control_mode": 0,
             "guidance_start": 0.0,
             "guidance_end": 0.7

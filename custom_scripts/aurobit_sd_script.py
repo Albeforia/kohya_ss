@@ -46,6 +46,10 @@ def call_sd(mode, url, payload, frame_idx, frame_map, cn_config):
         for cn in payload['alwayson_scripts']['controlnet']['args']:
             cn_img_path = frame_map[cn_config['source'][cn_unit]][frame_idx]
             cn['input_image'] = img_str(Image.open(cn_img_path))
+            cn['threshold_a'] = 0
+            cn['resize_mode'] = 1
+            cn['pixel_perfect'] = True
+            cn['processor_res'] = 512
             cn_unit += 1
 
     # Send to SD
@@ -92,6 +96,7 @@ def main(args):
     with open(config_file) as f:
         config = json.load(f)
         params = config['payload']
+        params['override_settings_restore_afterwards'] = False
 
     mode = config['mode']
     end_point = '/sdapi/v1/txt2img'
