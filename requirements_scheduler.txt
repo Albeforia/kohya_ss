@@ -2,3 +2,4 @@ schedule
 confluent_kafka
 pymongo
 cos-python-sdk-v5
+minio

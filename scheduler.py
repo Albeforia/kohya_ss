@@ -15,10 +15,10 @@ import schedule
 from PIL import Image
 from confluent_kafka import Consumer
 from gradio_client import Client
+from minio import Minio
+from minio.error import S3Error
 from pymongo import MongoClient, ReturnDocument
-from qcloud_cos import CosClientError, CosServiceError
-from qcloud_cos import CosConfig
-from qcloud_cos import CosS3Client
+from qcloud_cos.cos_comm import format_endpoint
 
 
 def get_last_line(file_name):
@@ -39,12 +39,21 @@ def convert_webp_to_png(directory):
             os.remove(os.path.join(directory, filename))
 
 
-def create_cos_client(setting):
+def create_minio_client(setting):
+    provider = setting['provider']
     secret_id = setting['secret_id']
     secret_key = setting['secret_key']
     region = setting['region']
-    config = CosConfig(Region=region, SecretId=secret_id, SecretKey=secret_key, Token=None, Scheme='https')
-    return CosS3Client(config)
+    if provider == 'tencent':
+        endpoint = format_endpoint(None, region, u'cos.', True, True)
+    else:
+        endpoint = 's3.amazonaws.com'
+    return Minio(
+        endpoint,
+        access_key=secret_id,
+        secret_key=secret_key,
+        secure=True
+    )
 
 
 def download_image(url, path, index, setting):
@@ -58,19 +67,19 @@ def download_image(url, path, index, setting):
         else:
             return print('File size: ' + str(size) + ' bytes')
 
-    client = create_cos_client(setting)
+    client = create_minio_client(setting)
 
     try:
         print(f'Downloading {url}')
         _, ext = os.path.splitext(url)
         local_file = os.path.join(path, f'image_{index}{ext}')
-        response = client.download_file(
-            Bucket=setting['bucket'],
-            Key=url,
-            DestFilePath=local_file)
+        client.fget_object(
+            bucket_name=setting['bucket'],
+            object_name=url,
+            file_path=local_file)
         convert_bytes(os.path.getsize(local_file), 'MB')
         return True
-    except CosClientError or CosServiceError as e:
+    except S3Error as e:
         print(f"[download_image] Network error: {e}")
         return False
 
@@ -195,7 +204,7 @@ def highres_task(task_id, user_id, task_params, setting):
 
 
 def upload_trained_files(output_path, user_id, task_id, setting):
-    client = create_cos_client(setting)
+    client = create_minio_client(setting)
 
     loss_ranges = [[0.08, 0.09], [0.07, 0.115], [0.06, 0.125], [0, 1]]
     files = glob.glob(os.path.join(output_path, '*.safetensors'))
@@ -226,36 +235,32 @@ def upload_trained_files(output_path, user_id, task_id, setting):
                 loss = float(match.group(2))
                 if epoch > max_epoch * 0.5 and loss_range[0] <= loss <= loss_range[1]:
                     print(f'Uploading file: {file}')
-                    with open(file, 'rb') as fp:
-                        fname = f"duck-test/{user_id}/{task_id}/{task_id}_{basename}"
-                        try:
-                            response = client.put_object(
-                                Bucket=setting['bucket'],
-                                Body=fp,
-                                Key=fname,
-                            )
-                            uploaded.append(fname)
-                            uploaded_local.append(file)
-                        except (CosClientError, CosServiceError) as e:
-                            print(f"Upload failed, {e.get_error_code()} {e.get_error_msg()}")
+                    fname = f"duck-test/{user_id}/{task_id}/{task_id}_{basename}"
+                    try:
+                        response = client.fput_object(
+                            bucket_name=setting['bucket'],
+                            object_name=fname,
+                            file_path=file
+                        )
+                        uploaded.append(fname)
+                        uploaded_local.append(file)
+                    except S3Error as e:
+                        print(f"Upload failed, {e}")
 
     return uploaded
 
 
 def upload_single_image(image_path, key, setting):
-    client = create_cos_client(setting)
-
-    # 上传文件
+    client = create_minio_client(setting)
     print(f'Uploading file: {image_path}')
-    with open(image_path, 'rb') as fp:
-        try:
-            response = client.put_object(
-                Bucket=setting['bucket'],
-                Body=fp,
-                Key=key,
-            )
-        except (CosClientError, CosServiceError) as e:
-            print(f"Upload failed, {e.get_error_code()} {e.get_error_msg()}")
+    try:
+        response = client.fput_object(
+            bucket_name=setting['bucket'],
+            object_name=key,
+            file_path=image_path
+        )
+    except S3Error as e:
+        print(f"Upload failed, {e}")
 
 
 def handle_lora_result(result, user_id, task_id, collection_result, webhook, setting):
