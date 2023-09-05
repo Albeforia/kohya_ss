@@ -89,7 +89,7 @@ def _judge_faces(detected_faces, local_file, input_file):
         }
     elif len(detected_faces) > 1:
         max2 = sorted(ratios)[-2:]
-        if (max2[1] / max2[0]) < 1.5:
+        if (max2[1] / max2[0]) < 1.8:
             return {
                 'valid': False,
                 'reason': 'Multiple faces',
@@ -97,7 +97,7 @@ def _judge_faces(detected_faces, local_file, input_file):
             }
     else:
         # Only one face
-        if ratios[0] < 0.25:
+        if ratios[0] < 0.06:
             return {
                 'valid': False,
                 'reason': 'Face too small',
