@@ -92,6 +92,8 @@ def get_frame_map(work_path):
 def main(args):
     frame_map = get_frame_map(args.work_path)
 
+    output_dir = os.path.join(args.work_path, 'generated')
+
     config_file = f"custom_scripts/sd_templates/{args.params_file}"
     with open(config_file) as f:
         config = json.load(f)
@@ -119,14 +121,14 @@ def main(args):
     img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'])
     params['seed'] = seed
     if img is not None:
-        img.save(os.path.join(args.output_path, os.path.basename(frame_map['source'][0])))
+        img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][0])))
 
         # Remaining frames
         for idx in range(1, len(frame_map['source'])):
             print(f'Generating frame {idx}')
             img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'])
             if img is not None:
-                img.save(os.path.join(args.output_path, os.path.basename(frame_map['source'][idx])))
+                img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
 
 
 if __name__ == '__main__':
@@ -152,10 +154,5 @@ if __name__ == '__main__':
         dest='prompt',
         type=str,
         default='')
-    parser.add_argument(
-        '--output_path',
-        dest='output_path',
-        type=str,
-        default=None)
 
     main(parser.parse_args())

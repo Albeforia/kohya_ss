@@ -84,7 +84,6 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt)
         run_cmd += f' "--api_addr={api_url}"'
         run_cmd += f' "--params_file={params_file}"'
         run_cmd += f' "--prompt={img_prompt}"'
-        run_cmd += f' "--output_path={generated_folder}"'
 
         p = subprocess.run(run_cmd, shell=True)
         if p.returncode == 0:
