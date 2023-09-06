@@ -343,7 +343,8 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
     data = {
         'userId': user_id,
         'img': result_imgs_watermark[index]['img'],
-        'relateId': task_params['relateId']
+        'relateId': task_params['relateId'],
+        'status': True,
     }
     data = json.dumps(data, indent=4, default=str)
     response = requests.request("POST", webhook, data=data, headers=headers)
@@ -417,15 +418,23 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
                     handle_highres_result(result, user_id, task_id, task_params, collection_result, webhook_url,
                                           setting)
             elif result['status'] == 4:
-                data = {
-                    'userId': user_id,
-                    'taskId': task_id,
-                    'finishTime': result['finish_time'].strftime("%Y-%m-%d %H:%M:%S"),
-                    "taskTpye": "test",
-                    "name": "test",
-                    'status': False,  # Fail
-                    'reason': result['info']
-                }
+                if task_type == 'lora_train':
+                    data = {
+                        'userId': user_id,
+                        'taskId': task_id,
+                        'finishTime': result['finish_time'].strftime("%Y-%m-%d %H:%M:%S"),
+                        "taskTpye": "test",
+                        "name": "test",
+                        'status': False,  # Fail
+                        'reason': result['info']
+                    }
+                elif task_type == 'highres_task':
+                    data = {
+                        'userId': user_id,
+                        'img': task_params['img'],
+                        'relateId': task_params['relateId'],
+                        'status': False,  # Fail
+                    }
                 data = json.dumps(data, indent=4, default=str)
                 response = requests.request("POST", webhook_url, data=data, headers=headers)
                 print(f"webhook: {response}")
