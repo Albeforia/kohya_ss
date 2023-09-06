@@ -640,6 +640,8 @@ def _train_api(input_folder, model_path, trigger_words):
         train_model(headless=True, print_only=False, **config)
 
         retrain, files = check_lora_losses(config)
+        # Skip for now
+        retrain = False
         if retrain:
             old_dir = os.path.join(config['output_dir'], 'old')
             os.makedirs(old_dir, exist_ok=True)
