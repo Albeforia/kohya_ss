@@ -46,8 +46,10 @@ def create_minio_client(setting):
     region = setting['region']
     if provider == 'tencent':
         endpoint = format_endpoint(None, region, u'cos.', True, True)
+    elif provider == 'amazon':
+        endpoint = f"s3.{region}.amazonaws.com"
     else:
-        endpoint = 's3.amazonaws.com'
+        return None
     return Minio(
         endpoint,
         access_key=secret_id,
