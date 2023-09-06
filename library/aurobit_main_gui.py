@@ -639,15 +639,14 @@ def _train_api(input_folder, model_path, trigger_words):
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
 
-        retrain, files = check_lora_losses(config)
         # Skip for now
-        retrain = False
-        if retrain:
-            old_dir = os.path.join(config['output_dir'], 'old')
-            os.makedirs(old_dir, exist_ok=True)
-            for f in files:
-                shutil.move(f, old_dir)
-            train_model(headless=True, print_only=False, **config)
+        # retrain, files = check_lora_losses(config)
+        # if retrain:
+        #     old_dir = os.path.join(config['output_dir'], 'old')
+        #     os.makedirs(old_dir, exist_ok=True)
+        #     for f in files:
+        #         shutil.move(f, old_dir)
+        #     train_model(headless=True, print_only=False, **config)
 
         return os.path.abspath(config['output_dir'])
     except Exception as e:
