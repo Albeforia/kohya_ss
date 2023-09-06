@@ -4,7 +4,6 @@ import os
 from collections import Counter
 
 from deepface import DeepFace
-from deepface.commons import functions
 
 
 def _get_image_file_paths(directory):
@@ -95,6 +94,7 @@ def gather_face_info(input_path, detect_mode):
                     continue
                 face_data['source'] = img
                 result.append(face_data)
+                break  # Assume only use one face per image
         except ValueError:
             print(f"No face detected in {img}")
             invalid_result.append(img)
@@ -103,39 +103,13 @@ def gather_face_info(input_path, detect_mode):
 
 
 def main(args):
-    if args.detect_only:
-        files = _get_image_file_paths(args.input_path)
-        faces = []
-        for img in files:
-            try:
-                img_objs = functions.extract_faces(
-                    img=img,
-                    target_size=(224, 224),
-                    detector_backend=args.detect_mode,
-                    grayscale=False,
-                    enforce_detection=True,
-                    align=True,
-                )
-                for _, region_obj, confidence in img_objs:
-                    faces.append({
-                        'region': region_obj,
-                        'confidence': confidence,
-                        'source': img
-                    })
-            except ValueError:
-                print(f"No face detected in {img}")
-        with open(f'{args.output_path}/faces.txt', 'w') as f:
-            f.write(json.dumps({
-                'faces': faces
-            }))
-    else:
-        results, stats, invalid = gather_face_info(args.input_path, args.detect_mode)
-        with open(f'{args.output_path}/faces.txt', 'w') as f:
-            f.write(json.dumps({
-                'faces': results,
-                'stats': stats,
-                'invalid': invalid
-            }))
+    results, stats, invalid = gather_face_info(args.input_path, args.detect_mode)
+    with open(f'{args.output_path}/faces.txt', 'w') as f:
+        f.write(json.dumps({
+            'faces': results,
+            'stats': stats,
+            'invalid': invalid
+        }))
 
 
 if __name__ == '__main__':
@@ -151,7 +125,6 @@ if __name__ == '__main__':
         dest='detect_mode',  # opencv, retinaface, mtcnn, ssd, dlib or mediapipe
         type=str,
         default=None)
-    parser.add_argument("--detect_only", action="store_true")
     parser.add_argument(
         '--output_path',
         dest='output_path',
