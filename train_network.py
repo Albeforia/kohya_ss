@@ -511,6 +511,14 @@ class NetworkTrainer:
             "ss_scale_weight_norms": args.scale_weight_norms,
         }
 
+        # ADD albeforia
+        faces_file = f'{args.output_dir}/faces.txt'
+        if os.path.exists(faces_file):
+            with open(faces_file) as f:
+                j = json.load(f)
+                gender = 'boy' if j['stats']['most_common_gender']== 'Man' else 'girl'
+                metadata.update({"gender": gender})
+
         if use_user_config:
             # save metadata of multiple datasets
             # NOTE: pack "ss_datasets" value as json one time
