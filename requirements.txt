@@ -40,5 +40,6 @@ deepface
 lpips
 imageio-ffmpeg
 -r Matting/requirements.txt
+-r requirements_scheduler.txt
 # for kohya_ss library
 -e . # no_verify leave this to specify not checking this a verification stage
