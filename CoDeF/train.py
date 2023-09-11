@@ -433,9 +433,7 @@ class ImplicitVideoSystem(LightningModule):
             self.canonical_img = batch['canonical_img']
             self.img_wh = batch['img_wh']
 
-        save_dir = os.path.join('results',
-                                self.hparams.root_dir.split('/')[0],
-                                self.hparams.root_dir.split('/')[1],
+        save_dir = os.path.join(os.path.join(self.hparams.root_dir, '..', 'results'),
                                 self.hparams.exp_name)
         sample_name = self.hparams.root_dir.split('/')[1]
         if self.hparams.canonical_dir is not None:
