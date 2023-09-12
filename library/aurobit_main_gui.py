@@ -650,14 +650,14 @@ def _train_api(input_folder, model_path, trigger_words):
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
 
-        retrain, files, max_epoch_file = check_lora_losses(config)
-        if retrain:
-            old_dir = os.path.join(config['output_dir'], 'old')
-            os.makedirs(old_dir, exist_ok=True)
-            for f in files:
-                shutil.move(f, old_dir)
-            config['lora_network_weights'] = os.path.join(old_dir, max_epoch_file)
-            train_model(headless=True, print_only=False, **config)
+        # retrain, files, max_epoch_file = check_lora_losses(config)
+        # if retrain:
+        #     old_dir = os.path.join(config['output_dir'], 'old')
+        #     os.makedirs(old_dir, exist_ok=True)
+        #     for f in files:
+        #         shutil.move(f, old_dir)
+        #     config['lora_network_weights'] = os.path.join(old_dir, max_epoch_file)
+        #     train_model(headless=True, print_only=False, **config)
 
         return os.path.abspath(config['output_dir'])
     except Exception as e:
