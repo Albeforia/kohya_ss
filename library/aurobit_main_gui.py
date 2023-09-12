@@ -571,10 +571,12 @@ def check_lora_losses(lora_config_json):
         retrain_range = training_profile.get('_retrain_range', [0.08, 0.09])
 
     max_epoch = lora_config_json['epoch']
-    epoch_range = [max_epoch, max_epoch - 1, max_epoch - 2]
-    need_retrain = True
+    max_epoch_file = ''
+    epoch_range = [max_epoch, max_epoch - 1, max_epoch - 2]  # last 3 epochs
+    need_retrain = False
     min_loss = 1
     max_loss = 0
+    avg_loss = 0
     for file in filtered_files:
         basename = os.path.basename(file)
         match = re.match(r'last_epoch(\d+)_loss(0\.\d+)\.safetensors', basename)
@@ -583,27 +585,36 @@ def check_lora_losses(lora_config_json):
             loss = float(match.group(2))
             if epoch not in epoch_range:
                 continue
+            if epoch == max_epoch:
+                max_epoch_file = basename
             min_loss = min(min_loss, loss)
             max_loss = max(max_loss, loss)
-            if retrain_range[0] <= loss <= retrain_range[1]:
-                need_retrain = False
+            avg_loss = avg_loss + loss
+            # if retrain_range[0] <= loss <= retrain_range[1]:
+            #     need_retrain = False
+    avg_loss = avg_loss / len(epoch_range)
+
+    if avg_loss > retrain_range[1]:
+        need_retrain = True
 
     log.info(f"Min loss of last 3 epoch {min_loss}")
     log.info(f"Max loss of last 3 epoch {max_loss}")
-    if need_retrain:
-        te_lr = lora_config_json['text_encoder_lr']
-        unet_lr = lora_config_json['unet_lr']
-        if max_loss < 0.08:
-            log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 0.5}, {unet_lr * 0.5}]")
-            lora_config_json['text_encoder_lr'] = te_lr * 0.5
-            lora_config_json['unet_lr'] = unet_lr * 0.5
-        elif min_loss > 0.09:
-            log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 2}, {unet_lr * 2}]")
-            lora_config_json['text_encoder_lr'] = te_lr * 2
-            lora_config_json['unet_lr'] = unet_lr * 2
-        return True, filtered_files
+    log.info(f"Avg loss of last 3 epoch {avg_loss}")
 
-    return False, filtered_files
+    if need_retrain:
+        # te_lr = lora_config_json['text_encoder_lr']
+        # unet_lr = lora_config_json['unet_lr']
+        # if max_loss < 0.08:
+        #     log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 0.5}, {unet_lr * 0.5}]")
+        #     lora_config_json['text_encoder_lr'] = te_lr * 0.5
+        #     lora_config_json['unet_lr'] = unet_lr * 0.5
+        # elif min_loss > 0.09:
+        #     log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 2}, {unet_lr * 2}]")
+        #     lora_config_json['text_encoder_lr'] = te_lr * 2
+        #     lora_config_json['unet_lr'] = unet_lr * 2
+        return True, filtered_files, max_epoch_file
+
+    return False, filtered_files, max_epoch_file
 
 
 def _train_api(input_folder, model_path, trigger_words):
@@ -639,14 +650,14 @@ def _train_api(input_folder, model_path, trigger_words):
         config['stop_text_encoder_training_pct'] = 0  # Not yet supported
         train_model(headless=True, print_only=False, **config)
 
-        # Skip for now
-        # retrain, files = check_lora_losses(config)
-        # if retrain:
-        #     old_dir = os.path.join(config['output_dir'], 'old')
-        #     os.makedirs(old_dir, exist_ok=True)
-        #     for f in files:
-        #         shutil.move(f, old_dir)
-        #     train_model(headless=True, print_only=False, **config)
+        retrain, files, max_epoch_file = check_lora_losses(config)
+        if retrain:
+            old_dir = os.path.join(config['output_dir'], 'old')
+            os.makedirs(old_dir, exist_ok=True)
+            for f in files:
+                shutil.move(f, old_dir)
+            config['lora_network_weights'] = os.path.join(old_dir, max_epoch_file)
+            train_model(headless=True, print_only=False, **config)
 
         return os.path.abspath(config['output_dir'])
     except Exception as e:
