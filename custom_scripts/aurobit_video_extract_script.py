@@ -1,17 +1,12 @@
 import argparse
-import datetime
 import glob
-import json
 import os
 import re
 import shutil
 import subprocess
-import time
-import torch
-import random
-import math
+
+import cv2
 import imageio
-from pathlib import Path
 from PIL import Image
 
 
@@ -28,6 +23,18 @@ def get_matting_cmd(from_folder, to_folder):
     return run_cmd
 
 
+def _rename_files(directory):
+    file_list = os.listdir(directory)
+    for filename in file_list:
+        old_path = os.path.join(directory, filename)
+        if os.path.isfile(old_path):
+            match = re.match(r'frame(\d+)_(\w+)\.(jpg|png)', filename)
+            if match:
+                new_filename = f"frame{match.group(1)}.{match.group(3)}"
+                new_path = os.path.join(directory, new_filename)
+                os.rename(old_path, new_path)
+
+
 def main(args):
     target_size = args.size
     reader = imageio.get_reader(args.input_path)
@@ -36,9 +43,6 @@ def main(args):
 
     counter = 0
     for i, frame in enumerate(reader):
-        if i % 2 != 0:
-            continue
-
         height, width, _ = frame.shape
 
         # 计算要缩放的新宽度和高度，保持宽高比不变
@@ -76,6 +80,9 @@ def main(args):
     os.makedirs(matted_path, exist_ok=True)
     for file_path in glob.glob(os.path.join(mask_path, '*_rgba.*')):
         shutil.move(file_path, matted_path)
+
+    _rename_files(mask_path)
+    _rename_files(matted_path)
 
 
 if __name__ == '__main__':

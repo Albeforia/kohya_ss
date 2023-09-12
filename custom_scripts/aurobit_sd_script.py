@@ -26,10 +26,11 @@ def img_str(image):
     return img_str
 
 
-def call_sd(mode, url, payload, frame_idx, frame_map, cn_config):
+def call_sd(mode, url, payload, frame_idx, frame_map, cn_config, canonical_image=None):
     # For img2img
     if 'img2img' in mode:
-        input_img_str = img_str(Image.open(frame_map['source'][frame_idx]))
+        input_img_str = img_str(Image.open(frame_map['source'][frame_idx])) if not canonical_image else img_str(
+            Image.open(canonical_image))
         payload['init_images'] = [input_img_str]
 
     # For inpainting
@@ -45,7 +46,8 @@ def call_sd(mode, url, payload, frame_idx, frame_map, cn_config):
     if cn_config['count'] > 0:
         for cn in payload['alwayson_scripts']['controlnet']['args']:
             cn_img_path = frame_map[cn_config['source'][cn_unit]][frame_idx]
-            cn['input_image'] = img_str(Image.open(cn_img_path))
+            cn['input_image'] = img_str(Image.open(cn_img_path)) if not canonical_image else img_str(
+                Image.open(canonical_image))
             cn['threshold_a'] = 0
             cn['resize_mode'] = 1
             cn['pixel_perfect'] = True
@@ -117,18 +119,29 @@ def main(args):
         'CLIP_stop_at_last_layers': base_model_config['clip']
     }
 
-    # The first frame
-    img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'])
-    params['seed'] = seed
-    if img is not None:
-        img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][0])))
+    params['width'] = args.width
+    params['height'] = args.height
 
-        # Remaining frames
-        for idx in range(1, len(frame_map['source'])):
-            print(f'Generating frame {idx}')
-            img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'])
-            if img is not None:
-                img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
+    params['batch_size'] = 1
+    params['seed'] = -1
+
+    if not args.codef:
+        # The first frame
+        img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'])
+        params['seed'] = seed
+        if img is not None:
+            img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][0])))
+
+            # Remaining frames
+            for idx in range(1, len(frame_map['source'])):
+                print(f'Generating frame {idx}')
+                img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'])
+                if img is not None:
+                    img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
+    else:
+        img, _ = call_sd(mode, url, params, 0, frame_map, config['cn_config'], args.canonical_image)
+        if img is not None:
+            img.save(os.path.join(output_dir, 'transformed.png'))
 
 
 if __name__ == '__main__':
@@ -154,5 +167,24 @@ if __name__ == '__main__':
         dest='prompt',
         type=str,
         default='')
+    parser.add_argument(
+        '--w',
+        dest='width',
+        type=int,
+        default=256)
+    parser.add_argument(
+        '--h',
+        dest='height',
+        type=int,
+        default=256)
+    parser.add_argument(
+        '--codef',
+        default=False,
+        action="store_true")
+    parser.add_argument(
+        '--canonical_image',
+        dest='canonical_image',
+        type=str,
+        default=None)
 
     main(parser.parse_args())
