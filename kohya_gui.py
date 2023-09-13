@@ -84,7 +84,7 @@ def UI(**kwargs):
                 <div class="ver-class">
                 python: <span title="{sys.version}">{python_version}</span>
                 &#x2000;•&#x2000;
-                torch: {getattr(torch, '__long_version__',torch.__version__)}
+                torch: {getattr(torch, '__long_version__', torch.__version__)}
                 &#x2000;•&#x2000;
                 xformers: {xformers_version}
                 </div>
@@ -123,7 +123,6 @@ def UI(**kwargs):
             from scheduler import start_consumer
             args = {
                 'setting_file': kwargs.get('scheduler_setting', ''),
-                'obj_store_setting': 'scheduler_settings/object_store.json'
             }
             start_consumer(args)
         except KeyboardInterrupt:

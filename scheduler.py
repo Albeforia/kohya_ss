@@ -454,14 +454,12 @@ def start_consumer(input_args):
     try:
         if isinstance(input_args, dict):
             arg1 = input_args['setting_file']
-            arg2 = input_args['obj_store_setting']
         else:
             arg1 = input_args.setting_file
-            arg2 = input_args.obj_store_setting
         # Load setting
         with open(arg1) as f:
             setting = json.load(f)
-        with open(arg2) as f:
+        with open(setting['obj_store_file']) as f:
             obj_store_setting = json.load(f)
             setting['obj_store'] = obj_store_setting
     except Exception as e:
