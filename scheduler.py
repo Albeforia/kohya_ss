@@ -10,6 +10,7 @@ import timeit
 import traceback
 from datetime import datetime
 
+import boto3
 import requests
 import schedule
 from PIL import Image
@@ -265,6 +266,25 @@ def upload_single_image(image_path, key, setting):
         print(f"Upload failed, {e}")
 
 
+def invalidate_cdn(keys, setting):
+    if setting['provider'] == 'amazon':
+        client = boto3.client('cloudfront')
+        response = client.create_invalidation(
+            DistributionId=f"{setting.get('dist_id', '')}",
+            InvalidationBatch={
+                'Paths': {
+                    'Quantity': len(keys),
+                    'Items': keys
+                },
+                'CallerReference': 'my-invalidation'
+            }
+        )
+        print(f"Invalidation response: {response}")
+    else:
+        # TODO
+        pass
+
+
 def handle_lora_result(result, user_id, task_id, collection_result, webhook, setting):
     start_timer = timeit.default_timer()
     file_list = upload_trained_files(result['files'], user_id, task_id, setting['obj_store'])
@@ -306,8 +326,9 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         return filename + '_w' + ext
 
     def get_hd_name(name):
-        target_name, target_ext = os.path.splitext(name)
-        return target_name + '_hd' + target_ext
+        # target_name, target_ext = os.path.splitext(name)
+        # return target_name + '_hd' + target_ext
+        return name
 
     headers = {
         'Content-Type': 'application/json',
@@ -329,10 +350,12 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         start_timer = timeit.default_timer()
         upload_single_image(highres_img, get_hd_name(target_img), setting['obj_store'])
         upload_single_image(highres_img_w, get_hd_name(result_imgs_watermark[index]['img']), setting['obj_store'])
+        invalidate_cdn([get_hd_name(target_img), get_hd_name(result_imgs_watermark[index]['img'])],
+                       setting['obj_store'])
         end_timer = timeit.default_timer()
         print(f"Upload finished in {(end_timer - start_timer) * 1000:.2f} ms")
-        result_imgs[index] = get_hd_name(target_img)
-        result_imgs_watermark[index]['img'] = get_hd_name(result_imgs_watermark[index]['img'])
+        # result_imgs[index] = get_hd_name(target_img)
+        # result_imgs_watermark[index]['img'] = get_hd_name(result_imgs_watermark[index]['img'])
         result_imgs_watermark[index]['hdFlag'] = True
     else:
         print('Cannot find the image to up-scale!')
@@ -341,7 +364,7 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
     collection_result.update_one(
         {'taskId': task_params['relateId']},
         {'$set': {
-            'result': result_imgs,
+            # 'result': result_imgs,
             'resultWithWaterMark': result_imgs_watermark,
             'updateTime': datetime.now(),
         }}
