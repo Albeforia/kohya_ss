@@ -66,7 +66,7 @@ def main():
 
     default_params = {
         "image": None,  # Image object or list of Image objects
-        "text": "GenieCam",
+        "text": "PikaPiku",
         "font": "watermark/arial.ttf",
         "font_size": 40,
         "text_color": [255, 255, 255, 10],
