@@ -267,8 +267,16 @@ def upload_single_image(image_path, key, setting):
 
 
 def invalidate_cdn(keys, setting):
+    secret_id = setting['secret_id']
+    secret_key = setting['secret_key']
+    region = setting['region']
     if setting['provider'] == 'amazon':
-        client = boto3.client('cloudfront')
+        client = boto3.client(
+            'cloudfront',
+            aws_access_key_id=secret_id,
+            aws_secret_access_key=secret_key,
+            region_name=region
+        )
         response = client.create_invalidation(
             DistributionId=f"{setting.get('dist_id', '')}",
             InvalidationBatch={
