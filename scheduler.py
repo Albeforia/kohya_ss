@@ -333,11 +333,6 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         filename, ext = os.path.splitext(input_path)
         return filename + '_w' + ext
 
-    def get_hd_name(name):
-        # target_name, target_ext = os.path.splitext(name)
-        # return target_name + '_hd' + target_ext
-        return name
-
     headers = {
         'Content-Type': 'application/json',
     }
@@ -356,9 +351,9 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         highres_img_w = add_watermark(highres_img, os.path.dirname(highres_img))
         print(f"Found target image, will replace with a up-scaled version")
         start_timer = timeit.default_timer()
-        upload_single_image(highres_img, get_hd_name(target_img), setting['obj_store'])
-        upload_single_image(highres_img_w, get_hd_name(result_imgs_watermark[index]['img']), setting['obj_store'])
-        invalidate_cdn([get_hd_name(target_img), get_hd_name(result_imgs_watermark[index]['img'])],
+        upload_single_image(highres_img, target_img, setting['obj_store'])
+        upload_single_image(highres_img_w, result_imgs_watermark[index]['img'], setting['obj_store'])
+        invalidate_cdn(['/' + target_img, '/' + result_imgs_watermark[index]['img']],
                        setting['obj_store'])
         end_timer = timeit.default_timer()
         print(f"Upload finished in {(end_timer - start_timer) * 1000:.2f} ms")
