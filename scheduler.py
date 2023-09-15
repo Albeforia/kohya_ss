@@ -2,12 +2,14 @@ import argparse
 import glob
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
 import time
 import timeit
 import traceback
+import uuid
 from datetime import datetime
 
 import boto3
@@ -266,7 +268,7 @@ def upload_single_image(image_path, key, setting):
         print(f"Upload failed, {e}")
 
 
-def invalidate_cdn(keys, setting):
+def invalidate_cdn(keys, task_id, setting):
     secret_id = setting['secret_id']
     secret_key = setting['secret_key']
     region = setting['region']
@@ -284,7 +286,7 @@ def invalidate_cdn(keys, setting):
                     'Quantity': len(keys),
                     'Items': keys
                 },
-                'CallerReference': 'my-invalidation'
+                'CallerReference': task_id + str(random.randrange(0, 100000))
             }
         )
         print(f"Invalidation response: {response}")
@@ -353,7 +355,7 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         start_timer = timeit.default_timer()
         upload_single_image(highres_img, target_img, setting['obj_store'])
         upload_single_image(highres_img_w, result_imgs_watermark[index]['img'], setting['obj_store'])
-        invalidate_cdn(['/' + target_img, '/' + result_imgs_watermark[index]['img']],
+        invalidate_cdn(['/' + target_img, '/' + result_imgs_watermark[index]['img']], task_id,
                        setting['obj_store'])
         end_timer = timeit.default_timer()
         print(f"Upload finished in {(end_timer - start_timer) * 1000:.2f} ms")
