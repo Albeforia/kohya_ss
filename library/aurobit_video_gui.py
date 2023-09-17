@@ -1,5 +1,6 @@
 import datetime
 import os
+import re
 import subprocess
 import uuid
 
@@ -8,6 +9,7 @@ import gradio as gr
 import requests
 import yaml
 
+from library.aurobit_fastblend_gui import smooth_video_frames
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -28,9 +30,10 @@ def images_to_video(img_folder, video_name, fps):
 
     video_visualizer = VideoVisualizer(path=video_name, frame_size=None, fps=fps)
 
-    images = [img for img in os.listdir(img_folder) if
+    images = [img for img in sorted(os.listdir(img_folder)) if
               img.endswith(".png") or img.endswith(".jpeg") or img.endswith(".jpg")]
     for img in images:
+        print(img)
         image = cv2.imread(os.path.join(img_folder, img))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         video_visualizer.add(image)
@@ -204,8 +207,26 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt,
                     out_video_path = os.path.join(work_folder, 'results', 'exp_transformed',
                                                   'video_exp_transformed.mp4')
             else:
+                def sort(files):
+                    files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
+                    return files
+
+                smoothed_path = os.path.join(work_folder, 'smooth')
+                smooth_video_frames(
+                    video_guide=source_folder, video_style=generated_folder,
+                    mode="Fast mode",
+                    window_size=30,
+                    patch_size=11,
+                    num_iter=6,
+                    guide_weight=100,
+                    gpu_id=0,
+                    contrast=1, sharpness=1,
+                    output_path=smoothed_path,
+                    sorter=sort
+                )
+
                 out_video_path = os.path.join(work_folder, f'{uuid.uuid4()}.mp4')
-                if not images_to_video(generated_folder, out_video_path, 15):
+                if not images_to_video(smoothed_path, out_video_path, 30):
                     return [
                         gr.update(value=generated_folder),
                         gr.update(value=None),
@@ -291,8 +312,9 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 output_video = gr.PlayableVideo(show_label=False)
             with gr.Row():
                 enable_codef = gr.Checkbox(label='Enable CoDeF',
-                                           info='When enabled, a CoDeF model will be automatically trained for the video (SLOW!!)')
-            with gr.Accordion('Canonical images', open=False):
+                                           info='When enabled, a CoDeF model will be automatically trained for the video (SLOW!!)',
+                                           value=False, visible=False)
+            with gr.Accordion('Canonical images', open=False, visible=False):
                 with gr.Row():
                     canonical_image = gr.Image(label='Original', type='filepath')
                     canonical_trans = gr.Image(label='Transformed', type='filepath')

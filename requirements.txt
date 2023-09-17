@@ -39,6 +39,7 @@ deepface
 #onnxruntime
 lpips
 imageio-ffmpeg
+cupy-cuda11x
 -r Matting/requirements.txt
 -r requirements_scheduler.txt
 # for kohya_ss library

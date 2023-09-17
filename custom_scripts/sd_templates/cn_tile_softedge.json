@@ -1,0 +1,43 @@
+{
+  "mode": "txt2img",
+  "base_model_config": {
+    "name": "revAnimated_v122",
+    "clip": 2
+  },
+  "cn_config": {
+    "count": 2,
+    "source": [
+      "matted",
+      "matted"
+    ]
+  },
+  "payload": {
+    "negative_prompt": "(worst quality:1.2), (low quality:1.2), (lowres:1.1), (monochrome:1.1), ((depth of field)), (greyscale), (((bad anatomy))), (((deformed))), (((disfigured))), watermark, mutation hands, mutation fingers, extra fingers, missing fingers",
+    "denoising_strength": 0.5,
+    "sampler_name": "DPM++ 2M Karras",
+    "steps": 20,
+    "cfg_scale": 7,
+    "alwayson_scripts": {
+      "controlnet": {
+        "args": [
+          {
+            "module": "tile_resample",
+            "model": "control_v11f1e_sd15_tile",
+            "weight": 0.4,
+            "control_mode": 0,
+            "guidance_start": 0.0,
+            "guidance_end": 1
+          },
+          {
+            "module": "softedge_pidinet",
+            "model": "control_v11p_sd15_softedge",
+            "weight": 0.75,
+            "control_mode": 0,
+            "guidance_start": 0.0,
+            "guidance_end": 1
+          }
+        ]
+      }
+    }
+  }
+}
