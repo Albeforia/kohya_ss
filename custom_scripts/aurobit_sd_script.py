@@ -1,5 +1,6 @@
 import argparse
 import base64
+import copy
 import io
 import json
 import os
@@ -26,14 +27,15 @@ def img_str(image):
     return img_str
 
 
-def call_sd(mode, url, payload, frame_idx, frame_map, cn_config, canonical_image=None):
+def call_sd(mode, url, payload, frame_idx, frame_map, cn_config, canonical_image=None, last_img=None, init_img=None,
+            temporal_weight=0.5):
     # For img2img
     if 'img2img' in mode:
-        input_img_str = img_str(Image.open(frame_map['source'][frame_idx])) if not canonical_image else img_str(
+        input_img_str = img_str(Image.open(frame_map[init_img][frame_idx])) if not canonical_image else img_str(
             Image.open(canonical_image))
         payload['init_images'] = [input_img_str]
 
-    # For inpainting
+    # For inpainting (TODO)
     if 'mask' in mode:
         mask_img = Image.open(frame_map['mask'][frame_idx])
         if 'invert' in mode:
@@ -53,9 +55,22 @@ def call_sd(mode, url, payload, frame_idx, frame_map, cn_config, canonical_image
             cn['pixel_perfect'] = True
             cn['processor_res'] = 512
             cn_unit += 1
+    payload_local = copy.deepcopy(payload)
+    if last_img:
+        payload_local['alwayson_scripts']['controlnet']['args'].append({
+            "input_image": img_str(last_img),
+            "model": "diff_control_sd15_temporalnet_fp16",
+            "module": "none",
+            "weight": temporal_weight,
+            "control_mode": 0,
+            "guidance_start": 0.0,
+            "guidance_end": 1,
+            "resize_mode": 1,
+            "pixel_perfect": True,
+        })
 
     # Send to SD
-    response = requests.post(url=url, json=payload)
+    response = requests.post(url=url, json=payload_local)
     if response.status_code == 200:
         try:
             r = response.json()
@@ -102,7 +117,8 @@ def main(args):
         params = config['payload']
         params['override_settings_restore_afterwards'] = False
 
-    mode = config['mode']
+    mode = 'txt2img' if args.mode == 'txt2img' else 'img2img'
+    init_img = None if mode == 'txt2img' else args.mode
     end_point = '/sdapi/v1/txt2img'
     if 'img2img' in mode:
         end_point = '/sdapi/v1/img2img'
@@ -125,9 +141,16 @@ def main(args):
     params['batch_size'] = 1
     params['seed'] = -1
 
-    if not args.codef:
+    if args.codef:
+        # We only need to generate the canonical image if using CoDeF
+        img, _ = call_sd(mode, url, params, 0, frame_map, config['cn_config'], args.canonical_image, init_img=init_img,
+                         temporal_weight=args.temporal_weight)
+        if img is not None:
+            img.save(os.path.join(output_dir, 'transformed.png'))
+    elif args.temporalnet:
         # The first frame
-        img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'])
+        img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'], init_img=init_img,
+                            temporal_weight=args.temporal_weight)
         params['seed'] = seed
         if img is not None:
             img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][0])))
@@ -135,13 +158,25 @@ def main(args):
             # Remaining frames
             for idx in range(1, len(frame_map['source'])):
                 print(f'Generating frame {idx}')
-                img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'])
+                img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'], last_img=img,
+                                 init_img=init_img, temporal_weight=args.temporal_weight)
                 if img is not None:
                     img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
     else:
-        img, _ = call_sd(mode, url, params, 0, frame_map, config['cn_config'], args.canonical_image)
+        # The first frame
+        img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'], init_img=init_img,
+                            temporal_weight=args.temporal_weight)
+        params['seed'] = seed
         if img is not None:
-            img.save(os.path.join(output_dir, 'transformed.png'))
+            img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][0])))
+
+            # Remaining frames
+            for idx in range(1, len(frame_map['source'])):
+                print(f'Generating frame {idx}')
+                img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'], init_img=init_img,
+                                 temporal_weight=args.temporal_weight)
+                if img is not None:
+                    img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
 
 
 if __name__ == '__main__':
@@ -168,6 +203,11 @@ if __name__ == '__main__':
         type=str,
         default='')
     parser.add_argument(
+        '--mode',
+        dest='mode',
+        type=str,
+        default='txt2img')
+    parser.add_argument(
         '--w',
         dest='width',
         type=int,
@@ -186,5 +226,14 @@ if __name__ == '__main__':
         dest='canonical_image',
         type=str,
         default=None)
+    parser.add_argument(
+        '--temporalnet',
+        default=False,
+        action="store_true")
+    parser.add_argument(
+        '--temporal_weight',
+        dest='temporal_weight',
+        type=float,
+        default=0.5)
 
     main(parser.parse_args())

@@ -1,4 +1,5 @@
 import datetime
+import math
 import os
 import re
 import subprocess
@@ -6,10 +7,13 @@ import uuid
 
 import cv2
 import gradio as gr
+import imageio
+import numpy as np
 import requests
 import yaml
 
-from library.aurobit_fastblend_gui import smooth_video_frames
+from PIL import Image
+from library.aurobit_fastblend_gui import FastModeRunner, AccurateModeRunner, align_frames
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -65,6 +69,64 @@ def get_default_codef_config(width, height):
     config['fps'] = 15
 
     return config
+
+
+def _read_frames(frames_dir, sorter=None):
+    file_names = sorted(os.listdir(frames_dir))
+    if sorter is not None:
+        file_names = sorter(file_names)
+    video = []
+    for file_name in file_names:
+        file_path = os.path.join(frames_dir, file_name)
+        image = imageio.v2.imread(file_path)
+        image = np.array(image)
+        video.append(image)
+    return video
+
+
+def _save_frames(frames, output_path):
+    os.makedirs(output_path, exist_ok=True)
+    for i, frame in enumerate(frames):
+        frame = Image.fromarray(frame)
+        frame.save(os.path.join(output_path, "%05d.jpg" % i))
+
+
+def smooth_video_frames(
+        video_guide,  # path
+        video_style,  # path
+        mode,
+        window_size,
+        batch_size,
+        minimum_patch_size,
+        num_iter,
+        guide_weight,
+        output_path,
+        initialize,
+        sorter,
+        progress=gr.Progress(track_tqdm=True),
+):
+    # input
+    frames_guide = _read_frames(video_guide, sorter)
+    frames_style = _read_frames(video_style, sorter)
+    frames_guide, frames_style = align_frames(frames_guide, frames_style)
+
+    frames_path = output_path
+    os.makedirs(frames_path, exist_ok=True)
+    # process
+    ebsynth_config = {
+        "minimum_patch_size": minimum_patch_size,
+        "threads_per_block": 8,
+        "num_iter": num_iter,
+        "gpu_id": 0,
+        "guide_weight": guide_weight,
+        "initialize": initialize
+    }
+    if mode == "Fast":
+        FastModeRunner().run(frames_guide, frames_style, batch_size=batch_size, window_size=window_size,
+                             ebsynth_config=ebsynth_config, save_path=frames_path)
+    elif mode == "Accurate":
+        AccurateModeRunner().run(frames_guide, frames_style, batch_size=batch_size, window_size=window_size,
+                                 ebsynth_config=ebsynth_config, save_path=frames_path)
 
 
 def handle_video_upload(input_video, enable_codef):
@@ -159,8 +221,9 @@ def handle_video_upload(input_video, enable_codef):
     ]
 
 
-def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt, width, height,
-                    enable_codef, canonical_image, weight_file):
+def generate_images(source_folder, sd_address, sd_port, sd_template, sd_mode, img_prompt, width, height,
+                    enable_codef, canonical_image, weight_file,
+                    enable_temporalnet, temporal_weight):
     def sort(files):
         files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
         return files
@@ -179,11 +242,18 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt,
         run_cmd += f' "--api_addr={api_url}"'
         run_cmd += f' "--params_file={params_file}"'
         run_cmd += f' "--prompt={img_prompt}"'
+        if sd_mode == 'none (txt2img)':
+            run_cmd += f' "--mode=txt2img"'
+        else:
+            run_cmd += f' "--mode={sd_mode}"'
         run_cmd += f' "--w={width}"'
         run_cmd += f' "--h={height}"'
         if enable_codef:
             run_cmd += f' "--codef"'
             run_cmd += f' "--canonical_image={canonical_image}"'
+        if enable_temporalnet:
+            run_cmd += f' "--temporalnet"'
+            run_cmd += f' "--temporal_weight={temporal_weight}"'
 
         log.info(run_cmd)
         p = subprocess.run(run_cmd, shell=True)
@@ -238,7 +308,7 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt,
         ]
 
 
-def smooth_video(source_folder, fb_mode, fb_window_size, fb_num_iter):
+def smooth_video(source_folder, fb_mode, fb_window_size, fb_num_iter, fb_guide_weight):
     def sort(files):
         files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
         return files
@@ -250,12 +320,12 @@ def smooth_video(source_folder, fb_mode, fb_window_size, fb_num_iter):
         video_guide=source_folder, video_style=generated_folder,
         mode=fb_mode,
         window_size=fb_window_size,
-        patch_size=11,
+        batch_size=min(2 ** math.ceil(math.log2(2 * fb_window_size)), 128),
+        minimum_patch_size=5,
         num_iter=fb_num_iter,
-        guide_weight=100,
-        gpu_id=0,
-        contrast=1, sharpness=1.5,
+        guide_weight=fb_guide_weight,
         output_path=smoothed_path,
+        initialize='identity',
         sorter=sort
     )
     out_video_path = os.path.join(work_folder, f'{uuid.uuid4()}_smooth.mp4')
@@ -316,7 +386,7 @@ def make_gif_fn(source_folder, final_size, final_duration, final_loop):
 
 
 def gradio_aurobit_video_gui_tab(headless=False):
-    with gr.Tab('Video'):
+    with gr.Tab('Video (beta)'):
         source_folder = gr.Textbox(visible=False)
         generated_folder = gr.Textbox(visible=False)
         generated_width = gr.State(512)
@@ -355,14 +425,22 @@ def gradio_aurobit_video_gui_tab(headless=False):
                     )
                     refresh_templates = gr.Button('Refresh')
 
-                img_prompt = gr.Textbox(label='Prompt', scale=2)
+                with gr.Column(scale=2):
+                    sd_mode = gr.Radio(['none (txt2img)', 'source', 'matted', 'mask'], label='Initialization',
+                                       value='none (txt2img)')
+                    img_prompt = gr.Textbox(label='Prompt')
+
+            with gr.Row():
+                enable_temporalnet = gr.Checkbox(label='Use TemporalNet', value=False)
+                temporal_weight = gr.Slider(label='TemporalNet weight', value=0.5, minimum=0, maximum=1, step=0.05)
 
             generate_btn = gr.Button('Generate', variant='primary')
 
             with gr.Row():
-                fb_mode = gr.Radio(["Fast mode", "Accurate mode"], label="FastBlend mode", value="Fast mode")
-                fb_window_size = gr.Slider(label="FastBlend window size", value=16, minimum=1, maximum=512, step=1)
-                fb_num_iter = gr.Slider(label="FastBlend iterations", value=6, minimum=1, maximum=10, step=1)
+                fb_mode = gr.Radio(["Fast", "Accurate"], label="Inference mode", value="Accurate")
+                fb_window_size = gr.Slider(label="Sliding window size", value=7, minimum=1, maximum=1000, step=1)
+                fb_num_iter = gr.Slider(label="Number of iterations", value=5, minimum=1, maximum=10, step=1)
+                fb_guide_weight = gr.Slider(label="Guide weight", value=10.0, minimum=0.0, maximum=100.0, step=0.1)
 
             smooth_btn = gr.Button('Smooth')
 
@@ -404,12 +482,13 @@ def gradio_aurobit_video_gui_tab(headless=False):
             inputs=[
                 source_folder,
                 sd_address, sd_port,
-                sd_template,
+                sd_template, sd_mode,
                 img_prompt,
                 generated_width, generated_height,
                 enable_codef,
                 codef_canonical_image,
                 codef_weight_path,
+                enable_temporalnet, temporal_weight,
             ],
             outputs=[
                 generated_folder,
@@ -423,7 +502,7 @@ def gradio_aurobit_video_gui_tab(headless=False):
             smooth_video,
             inputs=[
                 source_folder,
-                fb_mode, fb_window_size, fb_num_iter
+                fb_mode, fb_window_size, fb_num_iter, fb_guide_weight
             ],
             outputs=[
                 output_video,

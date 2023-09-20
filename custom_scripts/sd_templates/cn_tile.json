@@ -1,5 +1,4 @@
 {
-  "mode": "txt2img",
   "base_model_config": {
     "name": "revAnimated_v122",
     "clip": 2
