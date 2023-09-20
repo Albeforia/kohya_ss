@@ -25,13 +25,15 @@ def refresh_sd_templates():
     return gr.update(choices=load_sd_templates())
 
 
-def images_to_video(img_folder, video_name, fps):
+def images_to_video(img_folder, video_name, fps, sorter=None):
     from CoDeF.utils.video_visualizer import VideoVisualizer
 
     video_visualizer = VideoVisualizer(path=video_name, frame_size=None, fps=fps)
 
     images = [img for img in sorted(os.listdir(img_folder)) if
               img.endswith(".png") or img.endswith(".jpeg") or img.endswith(".jpg")]
+    if sorter is not None:
+        images = sorter(images)
     for img in images:
         print(img)
         image = cv2.imread(os.path.join(img_folder, img))
@@ -159,6 +161,10 @@ def handle_video_upload(input_video, enable_codef):
 
 def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt, width, height,
                     enable_codef, canonical_image, weight_file):
+    def sort(files):
+        files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
+        return files
+
     if os.path.exists(source_folder) and os.path.isdir(source_folder) and os.listdir(source_folder):
         work_folder = os.path.join(source_folder, '..')
         generated_folder = os.path.join(work_folder, 'generated')
@@ -207,26 +213,8 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt,
                     out_video_path = os.path.join(work_folder, 'results', 'exp_transformed',
                                                   'video_exp_transformed.mp4')
             else:
-                def sort(files):
-                    files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
-                    return files
-
-                smoothed_path = os.path.join(work_folder, 'smooth')
-                smooth_video_frames(
-                    video_guide=source_folder, video_style=generated_folder,
-                    mode="Fast mode",
-                    window_size=30,
-                    patch_size=11,
-                    num_iter=6,
-                    guide_weight=100,
-                    gpu_id=0,
-                    contrast=1, sharpness=1,
-                    output_path=smoothed_path,
-                    sorter=sort
-                )
-
                 out_video_path = os.path.join(work_folder, f'{uuid.uuid4()}.mp4')
-                if not images_to_video(smoothed_path, out_video_path, 30):
+                if not images_to_video(generated_folder, out_video_path, 30, sorter=sort):
                     return [
                         gr.update(value=generated_folder),
                         gr.update(value=None),
@@ -248,6 +236,39 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, img_prompt,
             gr.update(value='Nothing to generate'),
             gr.update(value=None),
         ]
+
+
+def smooth_video(source_folder, fb_mode, fb_window_size, fb_num_iter):
+    def sort(files):
+        files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
+        return files
+
+    work_folder = os.path.join(source_folder, '..')
+    generated_folder = os.path.join(work_folder, 'generated')
+    smoothed_path = os.path.join(work_folder, 'smooth')
+    smooth_video_frames(
+        video_guide=source_folder, video_style=generated_folder,
+        mode=fb_mode,
+        window_size=fb_window_size,
+        patch_size=11,
+        num_iter=fb_num_iter,
+        guide_weight=100,
+        gpu_id=0,
+        contrast=1, sharpness=1.5,
+        output_path=smoothed_path,
+        sorter=sort
+    )
+    out_video_path = os.path.join(work_folder, f'{uuid.uuid4()}_smooth.mp4')
+    if not images_to_video(smoothed_path, out_video_path, 30):
+        return [
+            gr.update(value=None),
+            gr.update(value="Video composition failed, try [Make GIF] below"),
+        ]
+
+    return [
+        gr.update(value=out_video_path),
+        gr.update(value='Generation finished'),
+    ]
 
 
 def list_models(sd_address, sd_port):
@@ -308,8 +329,8 @@ def gradio_aurobit_video_gui_tab(headless=False):
 
         with gr.Accordion('上传视频 (< 3s)'):
             with gr.Row():
-                input_video = gr.Video(show_label=False)
-                output_video = gr.PlayableVideo(show_label=False)
+                input_video = gr.Video(show_label=False, scale=2)
+                output_video = gr.PlayableVideo(show_label=False, scale=1)
             with gr.Row():
                 enable_codef = gr.Checkbox(label='Enable CoDeF',
                                            info='When enabled, a CoDeF model will be automatically trained for the video (SLOW!!)',
@@ -337,6 +358,13 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 img_prompt = gr.Textbox(label='Prompt', scale=2)
 
             generate_btn = gr.Button('Generate', variant='primary')
+
+            with gr.Row():
+                fb_mode = gr.Radio(["Fast mode", "Accurate mode"], label="FastBlend mode", value="Fast mode")
+                fb_window_size = gr.Slider(label="FastBlend window size", value=16, minimum=1, maximum=512, step=1)
+                fb_num_iter = gr.Slider(label="FastBlend iterations", value=6, minimum=1, maximum=10, step=1)
+
+            smooth_btn = gr.Button('Smooth')
 
             with gr.Accordion('Info', open=False):
                 with gr.Row(equal_height=False):
@@ -388,6 +416,18 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 output_video,
                 info_text,
                 canonical_trans
+            ]
+        )
+
+        smooth_btn.click(
+            smooth_video,
+            inputs=[
+                source_folder,
+                fb_mode, fb_window_size, fb_num_iter
+            ],
+            outputs=[
+                output_video,
+                info_text,
             ]
         )
 

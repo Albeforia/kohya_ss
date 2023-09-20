@@ -31,7 +31,7 @@
           {
             "module": "softedge_pidinet",
             "model": "control_v11p_sd15_softedge",
-            "weight": 0.75,
+            "weight": 0.8,
             "control_mode": 0,
             "guidance_start": 0.0,
             "guidance_end": 1
