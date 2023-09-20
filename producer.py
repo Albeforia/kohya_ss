@@ -3,6 +3,7 @@ import json
 import sys
 import time
 
+import sentry_sdk
 import schedule
 from confluent_kafka import Producer, KafkaException
 from pymongo import MongoClient, ReturnDocument
@@ -26,6 +27,11 @@ def main():
     # Kafka配置
     KAFKA_BOOTSTRAP_SERVERS = setting['kafka_server']
     KAFKA_TOPIC = setting['kafka_topic']
+
+    # Sentry
+    sentry_sdk.init(
+        dsn=setting['sentry_dsn'],
+    )
 
     # 创建生产者
     producer = Producer({'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS})

@@ -13,6 +13,7 @@ from datetime import datetime
 
 import boto3
 import requests
+import sentry_sdk
 import schedule
 from PIL import Image
 from confluent_kafka import Consumer
@@ -501,6 +502,11 @@ def start_consumer(input_args):
     # Kafka配置
     KAFKA_BOOTSTRAP_SERVERS = setting['kafka_server']
     KAFKA_TOPIC = setting['kafka_topic']
+
+    # Sentry
+    sentry_sdk.init(
+        dsn=setting['sentry_dsn'],
+    )
 
     # 创建消费者
     consumer = Consumer({'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS, 'group.id': 'mygroup'})
