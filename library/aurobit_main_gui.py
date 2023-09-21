@@ -117,7 +117,7 @@ def on_images_uploaded(
         to_upscale = set()
         for face_data in detected_faces:
             # TODO Hard-coded threshold
-            if max(face_data['size']) < 225:
+            if min(face_data['size']) < 300:
                 to_upscale.add(face_data['source'])
 
         if len(to_upscale) > 0:
@@ -525,7 +525,7 @@ def load_lora_config(use_wandb=True, mode='female', path='presets/lora/user_pres
         config['sample_every_n_epochs'] = 1
         config['sample_every_n_steps'] = 0
         config[
-            'sample_prompts'] = f'(masterpiece, best quality), {gender}, solo, upper body, --n (worst quality, low quality:2), nudity, nsfw, cropped, lowres, watermark,  --w 512 --h 704 --l 7 --s 24  --d {seed}'
+            'sample_prompts'] = f'(masterpiece, best quality), {gender}, solo, upper body, --n (worst quality, low quality:2), nudity, nsfw, cropped, lowres, watermark,  --w 512 --h 704 --l 7 --s 20  --d {seed}'
         config['sample_sampler'] = 'euler'
 
         if use_wandb:
