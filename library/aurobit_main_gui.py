@@ -117,7 +117,7 @@ def on_images_uploaded(
         to_upscale = set()
         for face_data in detected_faces:
             # TODO Hard-coded threshold
-            if min(face_data['size']) < 300:
+            if min(face_data['size']) < 256:
                 to_upscale.add(face_data['source'])
 
         if len(to_upscale) > 0:
