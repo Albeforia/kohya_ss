@@ -497,7 +497,7 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
         )
 
 
-def load_lora_config(use_wandb=True, mode='female', path='presets/lora/user_presets/lora_config.json'):
+def load_lora_config(use_wandb=True, mode='female', path=''):
     if not os.path.exists(path):
         return {}
 
@@ -617,12 +617,17 @@ def check_lora_losses(lora_config_json):
     return False, filtered_files, max_epoch_file
 
 
-def _train_api(input_folder, model_path, trigger_words):
+def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
     uploaded_files = get_file_paths(input_folder)
 
     # Preprocess
     work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, auto_upscale=True,
                                                                api_call=True)
+
+    if task_id:
+        with open(os.path.join(work_folder, '..', task_id + '.txt'), 'w') as f:
+            f.write(user_id)
+
     log.info(face_stats)
     if model_path:
         config.update({'pretrained_model_name_or_path': model_path})
@@ -816,10 +821,13 @@ def gradio_train_human_gui_tab(headless=False):
         api_only_model_path = gr.Textbox('', visible=False)
         api_only_output_path = gr.Textbox('', visible=False)
         api_only_trigger_words = gr.Textbox('', visible=False)
+        api_only_taskid = gr.Textbox(None, visible=False)
+        api_only_userid = gr.Textbox(None, visible=False)
         api_only_train = gr.Button('', visible=False)
         api_only_train.click(
             _train_api,
-            inputs=[api_only_image_path, api_only_model_path, api_only_trigger_words],
+            inputs=[api_only_image_path, api_only_model_path, api_only_trigger_words,
+                    api_only_taskid, api_only_userid],
             outputs=[api_only_output_path],
             api_name='train_lora'
         )
@@ -849,6 +857,8 @@ def gradio_train_human_gui_tab(headless=False):
                 )
             model_path = gr.Textbox(label='底模路径（必填）', visible=False, value=None)  # 废弃
             trigger_words = gr.Textbox(label='触发词（必填）')
+            taskid_dummy = gr.Textbox(None, visible=False)
+            userid_dummy = gr.Textbox(None, visible=False)
             train_button = gr.Button('开始训练', variant='primary')
 
         with gr.Accordion('Results', open=False):
@@ -874,6 +884,7 @@ def gradio_train_human_gui_tab(headless=False):
                 upload_folder,
                 model_path,
                 trigger_words,
+                taskid_dummy, userid_dummy
             ],
             outputs=[
                 output_folder
