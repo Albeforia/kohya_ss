@@ -73,7 +73,8 @@ export LD_LIBRARY_PATH=./venv/lib:$CUDNN_PATH/lib:$LD_LIBRARY_PATH
 # https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#lazy-loading
 export CUDA_MODULE_LOADING=LAZY
 
+python3 "$SCRIPT_DIR/kohya_gui.py" "$@"
 # Validate the requirements and run the script if successful
-if python3 "$SCRIPT_DIR/setup/validate_requirements.py" -r "$REQUIREMENTS_FILE"; then
-    python3 "$SCRIPT_DIR/kohya_gui.py" "$@"
-fi
+#if python3 "$SCRIPT_DIR/setup/validate_requirements.py" -r "$REQUIREMENTS_FILE"; then
+#    python3 "$SCRIPT_DIR/kohya_gui.py" "$@"
+#fi

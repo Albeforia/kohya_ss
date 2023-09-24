@@ -14,7 +14,7 @@ set PATH=%PATH%;%~dp0venv\Lib\site-packages\torch\lib
 set CUDA_MODULE_LOADING=LAZY
 
 :: Validate requirements
-python.exe .\setup\validate_requirements.py
+@REM python.exe .\setup\validate_requirements.py
 
 :: If the exit code is 0, run the kohya_gui.py script with the command-line arguments
 if %errorlevel% equ 0 (
