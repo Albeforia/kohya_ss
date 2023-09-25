@@ -13,7 +13,7 @@ import requests
 import yaml
 
 from PIL import Image
-from library.aurobit_fastblend_gui import FastModeRunner, AccurateModeRunner, align_frames
+from library.aurobit_fastblend_gui import FastModeRunner, AccurateModeRunner, InterpolationModeRunner
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -108,7 +108,7 @@ def smooth_video_frames(
     # input
     frames_guide = _read_frames(video_guide, sorter)
     frames_style = _read_frames(video_style, sorter)
-    frames_guide, frames_style = align_frames(frames_guide, frames_style)
+    # frames_guide, frames_style = align_frames(frames_guide, frames_style)
 
     frames_path = output_path
     os.makedirs(frames_path, exist_ok=True)
