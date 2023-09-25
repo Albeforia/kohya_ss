@@ -897,9 +897,9 @@ def gradio_train_human_gui_tab(headless=False):
             outputs=[lora_files]
         )
 
-    gradio_aurobit_upscale_gui_tab(headless=headless)
-
     gradio_aurobit_video_gui_tab(headless=headless)
+
+    gradio_aurobit_upscale_gui_tab(headless=headless)
 
     from library.aurobit_face_fusion_gui import gradio_aurobit_face_fusion_gui_tab
     gradio_aurobit_face_fusion_gui_tab(headless=headless)

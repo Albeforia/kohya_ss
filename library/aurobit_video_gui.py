@@ -2,6 +2,7 @@ import datetime
 import math
 import os
 import re
+import shutil
 import subprocess
 import uuid
 
@@ -13,7 +14,7 @@ import requests
 import yaml
 
 from PIL import Image
-from library.aurobit_fastblend_gui import FastModeRunner, AccurateModeRunner, InterpolationModeRunner
+from library.aurobit_fastblend_gui import FastModeRunner, AccurateModeRunner, InterpolationModeRunner, KeyFrameMatcher
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -81,7 +82,7 @@ def _read_frames(frames_dir, sorter=None):
         image = imageio.v2.imread(file_path)
         image = np.array(image)
         video.append(image)
-    return video
+    return video, file_names
 
 
 def _save_frames(frames, output_path):
@@ -105,9 +106,13 @@ def smooth_video_frames(
         sorter,
         progress=gr.Progress(track_tqdm=True),
 ):
+    def sort(files):
+        files.sort(key=lambda x: int(x.split('.')[0]))
+        return files
+
     # input
-    frames_guide = _read_frames(video_guide, sorter)
-    frames_style = _read_frames(video_style, sorter)
+    frames_guide, guide_files = _read_frames(video_guide, sorter)
+    frames_style, style_files = _read_frames(video_style, sorter)
     # frames_guide, frames_style = align_frames(frames_guide, frames_style)
 
     frames_path = output_path
@@ -126,6 +131,33 @@ def smooth_video_frames(
                              ebsynth_config=ebsynth_config, save_path=frames_path)
     elif mode == "Accurate":
         AccurateModeRunner().run(frames_guide, frames_style, batch_size=batch_size, window_size=window_size,
+                                 ebsynth_config=ebsynth_config, save_path=frames_path)
+    elif mode == "Interpolate":
+        # match frames
+        matched_keyframes = KeyFrameMatcher().match_filenames(guide_files, style_files)
+        print(matched_keyframes)
+        index_style = [i for i, file_name in enumerate(matched_keyframes) if file_name is not None]
+        InterpolationModeRunner().run(frames_guide, frames_style, index_style, batch_size=batch_size,
+                                      ebsynth_config=ebsynth_config, save_path=frames_path)
+    elif mode == "Interpolate-Fast":
+        # match frames
+        matched_keyframes = KeyFrameMatcher().match_filenames(guide_files, style_files)
+        print(matched_keyframes)
+        index_style = [i for i, file_name in enumerate(matched_keyframes) if file_name is not None]
+        InterpolationModeRunner().run(frames_guide, frames_style, index_style, batch_size=batch_size,
+                                      ebsynth_config=ebsynth_config, save_path=frames_path)
+        frames_style_new, _ = _read_frames(frames_path, sorter=sort)
+        FastModeRunner().run(frames_guide, frames_style_new, batch_size=batch_size, window_size=window_size,
+                             ebsynth_config=ebsynth_config, save_path=frames_path)
+    elif mode == "Interpolate-Accurate":
+        # match frames
+        matched_keyframes = KeyFrameMatcher().match_filenames(guide_files, style_files)
+        print(matched_keyframes)
+        index_style = [i for i, file_name in enumerate(matched_keyframes) if file_name is not None]
+        InterpolationModeRunner().run(frames_guide, frames_style, index_style, batch_size=batch_size,
+                                      ebsynth_config=ebsynth_config, save_path=frames_path)
+        frames_style_new, _ = _read_frames(frames_path, sorter=sort)
+        AccurateModeRunner().run(frames_guide, frames_style_new, batch_size=batch_size, window_size=window_size,
                                  ebsynth_config=ebsynth_config, save_path=frames_path)
 
 
@@ -223,7 +255,8 @@ def handle_video_upload(input_video, enable_codef):
 
 def generate_images(source_folder, sd_address, sd_port, sd_template, sd_mode, img_prompt, width, height,
                     enable_codef, canonical_image, weight_file,
-                    enable_temporalnet, temporal_weight):
+                    enable_temporalnet, temporal_weight,
+                    frame_interval):
     def sort(files):
         files.sort(key=lambda x: int(re.search(r'frame(\d+)', x).group(1)))
         return files
@@ -231,6 +264,8 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, sd_mode, im
     if os.path.exists(source_folder) and os.path.isdir(source_folder) and os.listdir(source_folder):
         work_folder = os.path.join(source_folder, '..')
         generated_folder = os.path.join(work_folder, 'generated')
+        if os.path.exists(generated_folder):
+            shutil.rmtree(generated_folder)
         os.makedirs(generated_folder, exist_ok=True)
 
         api_url = f'http://{sd_address}:{sd_port}'
@@ -254,6 +289,7 @@ def generate_images(source_folder, sd_address, sd_port, sd_template, sd_mode, im
         if enable_temporalnet:
             run_cmd += f' "--temporalnet"'
             run_cmd += f' "--temporal_weight={temporal_weight}"'
+        run_cmd += f' "--interval={frame_interval}"'
 
         log.info(run_cmd)
         p = subprocess.run(run_cmd, shell=True)
@@ -434,13 +470,17 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 enable_temporalnet = gr.Checkbox(label='Use TemporalNet', value=False)
                 temporal_weight = gr.Slider(label='TemporalNet weight', value=0.5, minimum=0, maximum=1, step=0.05)
 
-            generate_btn = gr.Button('Generate', variant='primary')
+            with gr.Row():
+                frame_interval = gr.Slider(label='Frame interval', value=0, minimum=0, maximum=9, step=1)
 
             with gr.Row():
-                fb_mode = gr.Radio(["Fast", "Accurate"], label="Inference mode", value="Accurate")
+                fb_mode = gr.Radio(["Fast", "Accurate", "Interpolate", "Interpolate-Fast", "Interpolate-Accurate"],
+                                   label="Inference mode", value="Accurate")
                 fb_window_size = gr.Slider(label="Sliding window size", value=7, minimum=1, maximum=1000, step=1)
                 fb_num_iter = gr.Slider(label="Number of iterations", value=5, minimum=1, maximum=10, step=1)
                 fb_guide_weight = gr.Slider(label="Guide weight", value=10.0, minimum=0.0, maximum=100.0, step=0.1)
+
+            generate_btn = gr.Button('Generate', variant='primary')
 
             smooth_btn = gr.Button('Smooth')
 
@@ -489,6 +529,7 @@ def gradio_aurobit_video_gui_tab(headless=False):
                 codef_canonical_image,
                 codef_weight_path,
                 enable_temporalnet, temporal_weight,
+                frame_interval,
             ],
             outputs=[
                 generated_folder,
