@@ -191,7 +191,7 @@ def highres_task(task_id, user_id, task_params, setting):
 
         for f in files:
             result = client.predict(
-                os.path.abspath(os.path.join(img_dir, f)), '1', api_name="/upscale",
+                os.path.abspath(os.path.join(img_dir, f)), '0', api_name="/upscale",
             )
             if result is not None:
                 if os.path.exists(result):
