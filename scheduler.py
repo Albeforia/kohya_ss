@@ -13,8 +13,8 @@ from datetime import datetime
 
 import boto3
 import requests
-import sentry_sdk
 import schedule
+import sentry_sdk
 from PIL import Image
 from confluent_kafka import Consumer
 from gradio_client import Client
@@ -22,6 +22,7 @@ from minio import Minio
 from minio.error import S3Error
 from pymongo import MongoClient, ReturnDocument
 from qcloud_cos.cos_comm import format_endpoint
+from urllib3 import ProxyManager
 
 
 def get_last_line(file_name):
@@ -53,6 +54,14 @@ def create_minio_client(setting):
         endpoint = f"s3.{region}.amazonaws.com"
     else:
         return None
+    if setting.get('proxy', None):
+        return Minio(
+            endpoint,
+            access_key=secret_id,
+            secret_key=secret_key,
+            secure=True,
+            http_client=ProxyManager(setting['proxy'])
+        )
     return Minio(
         endpoint,
         access_key=secret_id,
