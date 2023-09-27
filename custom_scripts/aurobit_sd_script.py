@@ -141,6 +141,7 @@ def main(args):
     params['batch_size'] = 1
     params['seed'] = -1
 
+    interval = args.interval + 1
     if args.codef:
         # We only need to generate the canonical image if using CoDeF
         img, _ = call_sd(mode, url, params, 0, frame_map, config['cn_config'], args.canonical_image, init_img=init_img,
@@ -149,6 +150,7 @@ def main(args):
             img.save(os.path.join(output_dir, 'transformed.png'))
     elif args.temporalnet:
         # The first frame
+        print(f'Generating frame 0')
         img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'], init_img=init_img,
                             temporal_weight=args.temporal_weight)
         params['seed'] = seed
@@ -157,6 +159,9 @@ def main(args):
 
             # Remaining frames
             for idx in range(1, len(frame_map['source'])):
+                if idx % interval != 0:
+                    continue
+
                 print(f'Generating frame {idx}')
                 img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'], last_img=img,
                                  init_img=init_img, temporal_weight=args.temporal_weight)
@@ -164,6 +169,7 @@ def main(args):
                     img.save(os.path.join(output_dir, os.path.basename(frame_map['source'][idx])))
     else:
         # The first frame
+        print(f'Generating frame 0')
         img, seed = call_sd(mode, url, params, 0, frame_map, config['cn_config'], init_img=init_img,
                             temporal_weight=args.temporal_weight)
         params['seed'] = seed
@@ -172,6 +178,9 @@ def main(args):
 
             # Remaining frames
             for idx in range(1, len(frame_map['source'])):
+                if idx % interval != 0:
+                    continue
+
                 print(f'Generating frame {idx}')
                 img, _ = call_sd(mode, url, params, idx, frame_map, config['cn_config'], init_img=init_img,
                                  temporal_weight=args.temporal_weight)
@@ -235,5 +244,10 @@ if __name__ == '__main__':
         dest='temporal_weight',
         type=float,
         default=0.5)
+    parser.add_argument(
+        '--interval',
+        dest='interval',
+        type=int,
+        default=0)
 
     main(parser.parse_args())

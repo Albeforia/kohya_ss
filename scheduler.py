@@ -133,7 +133,8 @@ def lora_task(task_id, user_id, task_params, setting):
         a = os.path.abspath(img_dir)
         c = user_id[-8:] if len(user_id) >= 8 else user_id
         result = client.predict(
-            a, '', c, api_name="/train_lora",
+            a, '', c, task_id, user_id,
+            api_name="/train_lora",
         )
         if result is not None:
             log_file = os.path.join(result, 'log.txt')
@@ -190,7 +191,7 @@ def highres_task(task_id, user_id, task_params, setting):
 
         for f in files:
             result = client.predict(
-                os.path.abspath(os.path.join(img_dir, f)), '1', api_name="/upscale",
+                os.path.abspath(os.path.join(img_dir, f)), '0', api_name="/upscale",
             )
             if result is not None:
                 if os.path.exists(result):
