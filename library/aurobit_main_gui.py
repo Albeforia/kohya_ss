@@ -3,7 +3,6 @@ import json
 import math
 import os
 import random
-import re
 import shutil
 import subprocess
 import traceback
@@ -22,8 +21,10 @@ from lora_gui import lora_tab, train_model
 # Set up logging
 log = setup_logging()
 
-
 # PYTHON = 'python3' if os.name == 'posix' else './venv/Scripts/python.exe'
+
+
+training_profile_file = 'training_profile.json'
 
 
 def run_cmd_with_log(cmd, api_call, log_file):
@@ -142,7 +143,7 @@ def on_images_uploaded(
             # shutil.rmtree(tmp_folder)
 
     # Update folders for lora config
-    with open('training_profile.json') as f:
+    with open(training_profile_file) as f:
         training_profile = json.load(f)
     basemodel_type = training_profile.get('default', 'majic')
     basemodel_profile = training_profile[basemodel_type]
@@ -559,73 +560,20 @@ def show_lora_files(lora_config_json):
     return show_lora_files_(lora_config_json['output_dir'], lora_config_json['save_model_as'])
 
 
-def check_lora_losses(lora_config_json):
-    files = get_file_paths(lora_config_json['output_dir'])
-    filtered_files = []
-    for f in files:
-        if os.path.splitext(f)[1] == '.' + lora_config_json['save_model_as']:
-            filtered_files.append(os.path.abspath(f))
-
-    with open('training_profile.json') as f:
-        training_profile = json.load(f)
-        retrain_range = training_profile.get('_retrain_range', [0.08, 0.09])
-
-    max_epoch = lora_config_json['epoch']
-    max_epoch_file = ''
-    epoch_range = [max_epoch, max_epoch - 1, max_epoch - 2]  # last 3 epochs
-    need_retrain = False
-    min_loss = 1
-    max_loss = 0
-    avg_loss = 0
-    for file in filtered_files:
-        basename = os.path.basename(file)
-        match = re.match(r'last_epoch(\d+)_loss(0\.\d+)\.safetensors', basename)
-        if match:
-            epoch = int(match.group(1))
-            loss = float(match.group(2))
-            if epoch not in epoch_range:
-                continue
-            if epoch == max_epoch:
-                max_epoch_file = basename
-            min_loss = min(min_loss, loss)
-            max_loss = max(max_loss, loss)
-            avg_loss = avg_loss + loss
-            # if retrain_range[0] <= loss <= retrain_range[1]:
-            #     need_retrain = False
-    avg_loss = avg_loss / len(epoch_range)
-
-    if avg_loss > retrain_range[1]:
-        need_retrain = True
-
-    log.info(f"Min loss of last 3 epoch {min_loss}")
-    log.info(f"Max loss of last 3 epoch {max_loss}")
-    log.info(f"Avg loss of last 3 epoch {avg_loss}")
-
-    if need_retrain:
-        # te_lr = lora_config_json['text_encoder_lr']
-        # unet_lr = lora_config_json['unet_lr']
-        # if max_loss < 0.08:
-        #     log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 0.5}, {unet_lr * 0.5}]")
-        #     lora_config_json['text_encoder_lr'] = te_lr * 0.5
-        #     lora_config_json['unet_lr'] = unet_lr * 0.5
-        # elif min_loss > 0.09:
-        #     log.info(f"Adjust learning rate [{te_lr}, {unet_lr}] -> [{te_lr * 2}, {unet_lr * 2}]")
-        #     lora_config_json['text_encoder_lr'] = te_lr * 2
-        #     lora_config_json['unet_lr'] = unet_lr * 2
-        return True, filtered_files, max_epoch_file
-
-    return False, filtered_files, max_epoch_file
-
-
 def _train_api(input_folder, model_path, trigger_words):
     uploaded_files = get_file_paths(input_folder)
+
+    # HACK: check if this is called via one-click training
+    if model_path == 'one-click':
+        global training_profile_file
+        training_profile_file = 'training_profile_oneclick.json'
+    else:
+        training_profile_file = 'training_profile.json'
 
     # Preprocess
     work_folder, _, _, config, face_stats = on_images_uploaded(uploaded_files, auto_matting=True, auto_upscale=True,
                                                                api_call=True)
     log.info(face_stats)
-    if model_path:
-        config.update({'pretrained_model_name_or_path': model_path})
 
     try:
         train_folder, _, _ = \
@@ -847,7 +795,7 @@ def gradio_train_human_gui_tab(headless=False):
                     # file_types=['image'],
                     # sacle=2
                 )
-            model_path = gr.Textbox(label='底模路径（必填）', visible=False, value=None)  # 废弃
+            model_path = gr.Textbox(label='底模路径（必填）', visible=False, value='one-click')  # 废弃
             trigger_words = gr.Textbox(label='触发词（必填）')
             train_button = gr.Button('开始训练', variant='primary')
 
