@@ -9,12 +9,14 @@ import subprocess
 import time
 import timeit
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import boto3
+import certifi
 import requests
 import schedule
 import sentry_sdk
+import urllib3
 from PIL import Image
 from confluent_kafka import Consumer
 from gradio_client import Client
@@ -22,7 +24,6 @@ from minio import Minio
 from minio.error import S3Error
 from pymongo import MongoClient, ReturnDocument
 from qcloud_cos.cos_comm import format_endpoint
-from urllib3 import ProxyManager
 
 
 def get_last_line(file_name):
@@ -55,12 +56,24 @@ def create_minio_client(setting):
     else:
         return None
     if setting.get('proxy', None):
+        timeout = timedelta(minutes=5).seconds
         return Minio(
             endpoint,
             access_key=secret_id,
             secret_key=secret_key,
             secure=True,
-            http_client=ProxyManager(setting['proxy'])
+            http_client=urllib3.ProxyManager(
+                proxy_url=setting['proxy'],
+                timeout=urllib3.util.Timeout(connect=timeout, read=timeout),
+                maxsize=10,
+                cert_reqs='CERT_REQUIRED',
+                ca_certs=os.environ.get('SSL_CERT_FILE') or certifi.where(),
+                retries=urllib3.Retry(
+                    total=5,
+                    backoff_factor=0.2,
+                    status_forcelist=[500, 502, 503, 504]
+                )
+            )
         )
     return Minio(
         endpoint,
