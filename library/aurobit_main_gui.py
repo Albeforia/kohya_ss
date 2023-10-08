@@ -594,7 +594,7 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
             train_folder,
             0.5, 0.4,
             'SmilingWolf/wd-v1-4-convnextv2-tagger-v2',
-            'long hair, brown hair, black hair, brown eyes, black eyes, lips, teeth, nose, portrait, forehead',
+            'long hair, short hair, brown hair, black hair, brown eyes, black eyes, lips, teeth, nose, portrait, forehead, mole, mole under eye',
             trigger_words,
             '',
             api_call=True
