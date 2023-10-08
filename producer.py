@@ -3,10 +3,30 @@ import json
 import sys
 import time
 
-import sentry_sdk
 import schedule
+import sentry_sdk
 from confluent_kafka import Producer, KafkaException
+from confluent_kafka.admin import AdminClient, NewTopic
 from pymongo import MongoClient, ReturnDocument
+
+
+def create_topic(server, topic):
+    # 创建一个AdminClient
+    a = AdminClient({'bootstrap.servers': server})
+
+    # 定义一个新的topic
+    new_topics = [NewTopic(topic, num_partitions=1, replication_factor=1)]
+
+    # 创建topic
+    fs = a.create_topics(new_topics)
+
+    # 等待每个Future完成
+    for topic, f in fs.items():
+        try:
+            f.result()  # The result itself is None
+            print("Topic {} created".format(topic))
+        except Exception as e:
+            print("Failed to create topic {}: {}".format(topic, e))
 
 
 def main():
@@ -35,6 +55,8 @@ def main():
 
     # 创建生产者
     producer = Producer({'bootstrap.servers': KAFKA_BOOTSTRAP_SERVERS})
+
+    create_topic(KAFKA_BOOTSTRAP_SERVERS, KAFKA_TOPIC)
 
     # 创建MongoDB客户端
     client = MongoClient(MONGODB_SERVER)
