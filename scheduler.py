@@ -25,6 +25,8 @@ from minio.error import S3Error
 from pymongo import MongoClient, ReturnDocument
 from qcloud_cos.cos_comm import format_endpoint
 
+from minio_progress import Progress
+
 
 def get_last_line(file_name):
     with open(file_name, 'rb') as f:
@@ -268,7 +270,8 @@ def upload_trained_files(output_path, user_id, task_id, setting):
                         response = client.fput_object(
                             bucket_name=setting['bucket'],
                             object_name=fname,
-                            file_path=file
+                            file_path=file,
+                            progress=Progress()
                         )
                         uploaded.append(fname)
                         uploaded_local.append(file)
