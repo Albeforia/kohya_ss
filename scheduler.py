@@ -233,7 +233,7 @@ def highres_task(task_id, user_id, task_params, setting):
         return failure(str(e))
 
 
-def upload_trained_files(output_path, user_id, task_id, setting):
+def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
     client = create_minio_client(setting)
 
     loss_ranges = [[0.08, 0.09], [0.07, 0.115], [0.06, 0.125], [0, 1]]
@@ -278,7 +278,7 @@ def upload_trained_files(output_path, user_id, task_id, setting):
                     except S3Error as e:
                         print(f"Upload failed, {e}")
 
-    if setting.get('clear_results', False):
+    if clear:
         for file in files:
             os.remove(file)
 
@@ -327,7 +327,8 @@ def invalidate_cdn(keys, task_id, setting):
 
 def handle_lora_result(result, user_id, task_id, collection_result, webhook, setting):
     start_timer = timeit.default_timer()
-    file_list = upload_trained_files(result['files'], user_id, task_id, setting['obj_store'])
+    file_list = upload_trained_files(result['files'], user_id, task_id, setting['obj_store'],
+                                     setting.get('clear_results', False))
     end_timer = timeit.default_timer()
     print(f"Upload finished in {(end_timer - start_timer) * 1000:.2f} ms")
     collection_result.update_one(
