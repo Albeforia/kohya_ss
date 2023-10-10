@@ -278,6 +278,10 @@ def upload_trained_files(output_path, user_id, task_id, setting):
                     except S3Error as e:
                         print(f"Upload failed, {e}")
 
+    if setting.get('clear_results', False):
+        for file in files:
+            os.remove(file)
+
     return uploaded
 
 
