@@ -600,6 +600,31 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
             api_call=True
         )
 
+        gender_tags = {}
+        with open(f"{config['output_dir']}/tags.txt") as file:
+            for line in file:
+                if ":" in line:
+                    tag, value = line.split(":")
+                    value = value.strip()
+                    if tag == '1girl' or tag == '1boy':
+                        gender_tags[tag] = int(value)
+        if '1girl' not in gender_tags:
+            gender_tags['1girl'] = 0
+        if '1boy' not in gender_tags:
+            gender_tags['1boy'] = 0
+        log.info(gender_tags)
+        gender_by_tag = 'Woman' if gender_tags['1girl'] >= gender_tags['1boy'] else 'Man'
+        if gender_by_tag != face_stats['most_common_gender']:
+            log.warning('Gender mismatch! Gender by tags will be used')
+            faces_file = f"{config['output_dir']}/faces.txt"
+            if os.path.exists(faces_file):
+                ff = open(faces_file)
+                j = json.load(ff)
+                j['stats']['most_common_gender'] = gender_by_tag
+                ff.close()
+                with open(faces_file, 'w') as json_file:
+                    json.dump(j, json_file)
+
         log.info(config)
         # Train
         config.pop('stop_text_encoder_training', None)
