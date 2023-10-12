@@ -443,7 +443,7 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
         # 更新MongoDB中的文档状态
         # TODO Should set status after task_type is filtered?
         updated_doc = collection.find_one_and_update(
-            {'taskId': task_id},
+            {'taskId': task_id, 'status': 1},
             {'$set': {'status': 2}},  # 2=Task is executing
             return_document=ReturnDocument.AFTER
         )
@@ -516,7 +516,7 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
                 print(f"webhook: {response}")
                 # TODO warning failure
         else:
-            print(f'Task {task_id} not found, pass')
+            print(f'Task {task_id} not found or has been eaten, pass')
 
 
 def start_consumer(input_args):
