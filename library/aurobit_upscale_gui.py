@@ -120,7 +120,7 @@ def _upscale_api(image_path, method):
     if method_int == 0:
         return upscale_real_esrgan(image_path, '2x')
     elif method_int == 1:
-        return upscale_codeformer(image_path, 0.85, False, True, True)
+        return upscale_codeformer(image_path, 1.0, False, True, True)
     else:
         return upscale_real_esrgan(image_path, '2x')
 
