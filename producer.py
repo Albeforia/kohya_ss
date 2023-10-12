@@ -34,6 +34,7 @@ def main():
     # 解析命令行参数
     parser = argparse.ArgumentParser(description="Read from MongoDB and write to Kafka.")
     parser.add_argument("setting_file", type=str)
+    parser.add_argument('--interval', dest='interval', type=float, default=1)
     args = parser.parse_args()
 
     # Load setting
@@ -100,7 +101,7 @@ def main():
                 write_message(task_id, doc['_id'])
 
     # 使用schedule库定时执行任务
-    schedule.every(15).minutes.do(read_from_mongo_and_write_to_kafka)
+    schedule.every(args.interval).minutes.do(read_from_mongo_and_write_to_kafka)
 
     while True:
         schedule.run_pending()
