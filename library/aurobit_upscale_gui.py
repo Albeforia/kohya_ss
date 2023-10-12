@@ -41,6 +41,34 @@ def submit_real_esrgan(image_path, scale_opt):
     return gr.update(value=upscale_real_esrgan(image_path, scale_opt))
 
 
+def upscale_esrgan(image_path):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', 'upscale', 'esrgan_variant', current_time)
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Local model!
+    model_path = 'weights/4x-UltraSharp.pth'
+
+    run_cmd = f'accelerate launch "{os.path.join("library", "aurobit_upscaler.py")}"'
+    run_cmd += f' "--input_path={image_path}"'
+    run_cmd += f' "--output_path={output_folder}"'
+    run_cmd += f' "--model_path={model_path}"'
+
+    p = subprocess.run(run_cmd, shell=True)
+    if p.returncode == 0:
+        results = [f for f in os.listdir(output_folder) if os.path.isfile(os.path.join(output_folder, f))]
+        if len(results) == 1:  # Single image
+            return os.path.abspath(os.path.join(output_folder, results[0]))
+        else:
+            return os.path.abspath(output_folder)
+
+    return None
+
+
+def submit_esrgan(image_path):
+    return gr.update(value=upscale_esrgan(image_path))
+
+
 def upscale_codeformer(image_path,
                        cf_weight,
                        cf_face_aligned,
@@ -118,6 +146,26 @@ def gradio_aurobit_upscale_gui_tab(headless=False):
             ],
             outputs=[
                 image_esrgan_out
+            ],
+        )
+
+        with gr.Accordion('ESRGAN (4x-UltraSharp)'):
+            with gr.Row():
+                image_esrgan2 = gr.Image(type='filepath', label='input')
+                image_esrgan_out2 = gr.Image(type='filepath', interactive=False, label='output')
+
+            with gr.Row():
+                submit_btn2 = gr.Button(
+                    'Submit', variant='primary'
+                )
+
+        submit_btn2.click(
+            submit_esrgan,
+            inputs=[
+                image_esrgan2,
+            ],
+            outputs=[
+                image_esrgan_out2
             ],
         )
 
