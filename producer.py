@@ -83,7 +83,7 @@ def main():
     # 从MongoDB读取数据，并写入Kafka
     def read_from_mongo_and_write_to_kafka():
         utilization = pynvml.nvmlDeviceGetUtilizationRates(gpu_handle)
-        print("GPU Compute Utilization: {}%".format(utilization.gpu))
+        # print("GPU Compute Utilization: {}%".format(utilization.gpu))
         if utilization.gpu > 80:
             print("Skip because of high GPU utilization")
             return
