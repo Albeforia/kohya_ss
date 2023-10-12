@@ -98,17 +98,27 @@ def download_image(url, path, index, setting):
 
     client = create_minio_client(setting)
 
+    use_cdn = setting.get('use_cdn', False)
+    cdn = setting.get('cdn', '')
+
     try:
         print(f'Downloading {url}')
         _, ext = os.path.splitext(url)
         local_file = os.path.join(path, f'image_{index}{ext}')
-        client.fget_object(
-            bucket_name=setting['bucket'],
-            object_name=url,
-            file_path=local_file)
+        if not use_cdn:
+            # Directly download from S3
+            client.fget_object(
+                bucket_name=setting['bucket'],
+                object_name=url,
+                file_path=local_file)
+        else:
+            response = requests.get(cdn + '/' + url)
+            response.raise_for_status()
+            with open(local_file, 'wb') as f:
+                f.write(response.content)
         convert_bytes(os.path.getsize(local_file), 'MB')
         return True
-    except S3Error as e:
+    except (S3Error, requests.HTTPError) as e:
         print(f"[download_image] Network error: {e}")
         return False
 
