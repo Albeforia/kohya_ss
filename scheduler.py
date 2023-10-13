@@ -250,6 +250,9 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
     files = glob.glob(os.path.join(output_path, '*.safetensors'))
     pattern = r'last_epoch(\d+)_loss(0\.\d+)\.safetensors'
 
+    upload_method = setting.get('upload_method', None)
+    s3_cred_file = setting.get('s3_cred_file', None)
+
     # 寻找最大的 epoch
     max_epoch = 0
     for file in files:
@@ -276,17 +279,22 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
                 if epoch > max_epoch * 0.5 and loss_range[0] <= loss <= loss_range[1]:
                     print(f'Uploading file: {file}')
                     fname = f"duck-test/{user_id}/{task_id}/{task_id}_{basename}"
-                    try:
-                        response = client.fput_object(
-                            bucket_name=setting['bucket'],
-                            object_name=fname,
-                            file_path=file,
-                            progress=Progress(interval=3)
-                        )
-                        uploaded.append(fname)
-                        uploaded_local.append(file)
-                    except S3Error as e:
-                        print(f"Upload failed, {e}")
+                    if upload_method == 's5cmd' and s3_cred_file:
+                        cmd = f"s5cmd --credentials-file {s3_cred_file} cp {file} s3://{setting['bucket']}/{fname}"
+                        if subprocess.run(cmd, shell=True) != 0:
+                            print(f"Upload failed")
+                    else:
+                        try:
+                            response = client.fput_object(
+                                bucket_name=setting['bucket'],
+                                object_name=fname,
+                                file_path=file,
+                                progress=Progress(interval=3)
+                            )
+                            uploaded.append(fname)
+                            uploaded_local.append(file)
+                        except S3Error as e:
+                            print(f"Upload failed, {e}")
 
     if clear:
         for file in files:
