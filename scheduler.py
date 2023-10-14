@@ -280,7 +280,7 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
                     print(f'Uploading file: {file}')
                     fname = f"duck-test/{user_id}/{task_id}/{task_id}_{basename}"
                     if upload_method == 's5cmd' and s3_cred_file:
-                        cmd = f"s5cmd --credentials-file {s3_cred_file} cp {file} s3://{setting['bucket']}/{fname}"
+                        cmd = f"s5cmd --credentials-file {s3_cred_file} cp --sp {file} s3://{setting['bucket']}/{fname}"
                         if subprocess.run(cmd, shell=True) != 0:
                             print(f"Upload failed")
                     else:
