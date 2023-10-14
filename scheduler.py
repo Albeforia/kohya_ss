@@ -132,6 +132,11 @@ def lora_task(task_id, user_id, task_params, setting):
             'info': f'Task fail: {reason}'
         }
 
+    def truncate_to_N(list_input, N):
+        while len(list_input) > N:
+            del list_input[random.randint(0, len(list_input) - 1)]
+        return list_input
+
     start_time = datetime.now()
     # 创建以 task_id 命名的目录
     img_dir = os.path.join('tmp', task_id + '_images')
@@ -147,6 +152,7 @@ def lora_task(task_id, user_id, task_params, setting):
             if not download_image(img_url, img_dir, 0, setting['obj_store']):
                 return failure('Cannot fetch images')
         img_urls = task_params.get('otherImg', [])
+        img_urls = truncate_to_N(img_urls, 23)
         for i, url in enumerate(img_urls):
             if not download_image(url, img_dir, i + 1, setting['obj_store']):
                 return failure('Cannot fetch images')
