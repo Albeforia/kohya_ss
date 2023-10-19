@@ -624,6 +624,17 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
                 ff.close()
                 with open(faces_file, 'w') as json_file:
                     json.dump(j, json_file)
+            # Update training params
+            basemodel_type = training_profile.get('default', 'majic')
+            basemodel_profile = training_profile[basemodel_type]
+            config_file_path = basemodel_profile['male']
+            lora_config_json = load_lora_config(use_wandb=False, mode='male', path=config_file_path)
+            lora_config_json.update({'train_data_dir': config['train_data_dir']})
+            lora_config_json.update({'output_dir': config['output_dir']})
+            lora_config_json.update({'logging_dir': config['logging_dir']})
+            lora_config_json.update({'pretrained_model_name_or_path': config['pretrained_model_name_or_path']})
+            lora_config_json.update({'epoch': config['epoch']})
+            config = lora_config_json
 
         log.info(config)
         # Train
