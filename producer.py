@@ -86,19 +86,22 @@ def main():
         utilization = pynvml.nvmlDeviceGetUtilizationRates(gpu_handle)
         # print("GPU Compute Utilization: {}%".format(utilization.gpu))
         if utilization.gpu > 80:
-            print("Skip because of high GPU utilization")
+            # print("Skip because of high GPU utilization")
             return
 
-        doc = collection.find_one_and_update(
-            {'status': 0, 'taskType': setting['task_type']},
-            {'$set': {'status': 1}},
-            return_document=ReturnDocument.AFTER
-        )
-        if doc is not None:
-            task_id = doc.get('taskId')
-            if task_id:
-                print('Found doc, try writing...')
-                write_message(task_id, doc['_id'])
+        try:
+            doc = collection.find_one_and_update(
+                {'status': 0, 'taskType': setting['task_type']},
+                {'$set': {'status': 1}},
+                return_document=ReturnDocument.AFTER
+            )
+            if doc is not None:
+                task_id = doc.get('taskId')
+                if task_id:
+                    print('Found doc, try writing...')
+                    write_message(task_id, doc['_id'])
+        except Exception as e:
+            print(f"{e} happened when accessing MongoDB")
 
     # 使用schedule库定时执行任务
     schedule.every(args.interval).minutes.do(read_from_mongo_and_write_to_kafka)
