@@ -289,6 +289,7 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
                         cmd = f"s5cmd --credentials-file {s3_cred_file} cp --sp {file} s3://{setting['bucket']}/{fname}"
                         if subprocess.run(cmd, shell=True) != 0:
                             print(f"Upload failed")
+                            raise Exception(f"Upload failed")
                     else:
                         try:
                             response = client.fput_object(
@@ -301,6 +302,7 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
                             uploaded_local.append(file)
                         except S3Error as e:
                             print(f"Upload failed, {e}")
+                            raise Exception(f"Upload failed")
 
     if clear:
         for file in files:
@@ -320,6 +322,7 @@ def upload_single_image(image_path, key, setting):
         )
     except S3Error as e:
         print(f"Upload failed, {e}")
+        raise Exception(f"Upload image failed")
 
 
 def invalidate_cdn(keys, task_id, setting):
@@ -364,6 +367,7 @@ def handle_lora_result(result, user_id, task_id, collection_result, webhook, set
         }},
         upsert=True
     )
+
     data = {
         'userId': user_id,
         'taskId': task_id,
@@ -379,6 +383,7 @@ def handle_lora_result(result, user_id, task_id, collection_result, webhook, set
     }
     response = requests.request("POST", webhook, data=data, headers=headers)
     print(f"webhook: {response}")
+    response.raise_for_status()
 
 
 def handle_highres_result(result, user_id, task_id, task_params, collection_result, webhook, setting):
@@ -439,6 +444,7 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
     data = json.dumps(data, indent=4, default=str)
     response = requests.request("POST", webhook, data=data, headers=headers)
     print(f"webhook: {response}")
+    response.raise_for_status()
 
 
 def scan_and_do_task(consumer, collection, collection_result, setting):
@@ -456,11 +462,17 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
         print(f"Received message: {task_id}")
         # 更新MongoDB中的文档状态
         # TODO Should set status after task_type is filtered?
-        updated_doc = collection.find_one_and_update(
-            {'taskId': task_id, 'status': 1},
-            {'$set': {'status': 2}},  # 2=Task is executing
-            return_document=ReturnDocument.AFTER
-        )
+        updated_doc = None
+        try:
+            updated_doc = collection.find_one_and_update(
+                {'taskId': task_id, 'status': 1},
+                {'$set': {'status': 2}},  # 2=Task is executing
+                return_document=ReturnDocument.AFTER
+            )
+        except Exception as e:
+            print(f"{e} happened when fetching task from MongoDB")
+            sentry_sdk.capture_message(f"lora_train task {task_id}: {e} | STAGE: before start")
+
         if updated_doc is not None:
             user_id = updated_doc.get('userId')
             task_type = updated_doc.get('taskType')
@@ -488,26 +500,40 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
             if result is None:
                 continue
 
-            # 更新MongoDB中的文档状态
-            collection.update_one(
-                {'taskId': task_id},
-                {'$set': {
-                    'startTime': result['start_time'],
-                    'finishTime': result['finish_time'],
-                    'status': result['status']
-                }},
-            )
             print(f"task {task_id}: {result['info']}")
 
             webhook_url = f"{setting['webhook']}{updated_doc.get('webhook')}"
             headers = {'Content-Type': 'application/json'}
             if result['status'] == 3:
-                if task_type == 'lora_train':
-                    handle_lora_result(result, user_id, task_id, collection_result, webhook_url, setting)
-                elif task_type == 'highres_task':
-                    handle_highres_result(result, user_id, task_id, task_params, collection_result, webhook_url,
-                                          setting)
-            elif result['status'] == 4:
+                try:
+                    if task_type == 'lora_train':
+                        handle_lora_result(result, user_id, task_id, collection_result, webhook_url, setting)
+                    elif task_type == 'highres_task':
+                        handle_highres_result(result, user_id, task_id, task_params, collection_result, webhook_url,
+                                              setting)
+                except Exception as e:
+                    # This should be considered as task failure
+                    result['status'] = 4
+                    result['info'] = f"{e} happened when handling task results"
+
+                    print(result['info'])
+                    sentry_sdk.capture_message(f"{task_type} task {task_id}: {e} | STAGE: handling result")
+
+            # 更新MongoDB中的文档状态
+            try:
+                collection.update_one(
+                    {'taskId': task_id},
+                    {'$set': {
+                        'startTime': result['start_time'],
+                        'finishTime': result['finish_time'],
+                        'status': result['status']
+                    }},
+                )
+            except Exception as e:
+                print(f"{e} happened when updating task to MongoDB")
+                sentry_sdk.capture_message(f"{task_type} task {task_id}: {e} | STAGE: updating status")
+
+            if result['status'] == 4:
                 if task_type == 'lora_train':
                     data = {
                         'userId': user_id,
@@ -528,7 +554,7 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
                 data = json.dumps(data, indent=4, default=str)
                 response = requests.request("POST", webhook_url, data=data, headers=headers)
                 print(f"webhook: {response}")
-                # TODO warning failure
+                response.raise_for_status()
         else:
             print(f'Task {task_id} not found or has been eaten, pass')
 
@@ -584,7 +610,7 @@ def start_consumer(input_args):
             time.sleep(0.5)
         except Exception as e:
             print(f"[ERROR] {e}")
-            # TODO warning failure
+            sentry_sdk.capture_message(f"General error: {e}")
 
 
 if __name__ == "__main__":
