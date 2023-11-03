@@ -6,7 +6,6 @@ import os
 import random
 import sys
 import timeit
-from datetime import datetime
 
 import requests
 import tensorflow as tf
