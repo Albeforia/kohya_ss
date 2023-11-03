@@ -5,6 +5,5 @@ pillow>=10.0.0
 rich==13.4.1
 retina-face==0.0.13
 
-schedule
-boto3
+requests
 minio
