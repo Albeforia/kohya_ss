@@ -400,9 +400,13 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
     }
 
     doc = collection_result.find_one({'taskId': task_params['relateId']})
-    if doc is None or doc['userId'] != user_id:
+    if doc is None:
         print('Up-scaling is done, but cannot find corresponding result')
-        return
+        raise Exception('Up-scaling is done, but cannot find corresponding result')
+
+    if doc['taskType'] != 'duo_photo_gen' and doc['userId'] != user_id:
+        print('Up-scaling is done, but this photo is inaccessible to the user')
+        raise Exception('Up-scaling is done, but this photo is inaccessible to the user')
 
     target_img = task_params['img']
     result_imgs = doc['result']
