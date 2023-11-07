@@ -40,7 +40,7 @@ deepface
 #onnxruntime
 lpips
 imageio-ffmpeg
-cupy-cuda11x
+#cupy-cuda11x
 pynvml
 -r Matting/requirements.txt
 -r requirements_scheduler.txt
