@@ -87,6 +87,7 @@ def gather_face_info(input_path, detect_mode):
     invalid_result = []
     for img in files:
         try:
+            print(img)
             faces = DeepFace.analyze(img, 'gender', detector_backend=detect_mode)
             for face in faces:
                 face_data = _parse_analysis_result(face)
