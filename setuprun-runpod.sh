@@ -14,8 +14,8 @@ apt install -y libcudnn8=8.7.0.84-1+cuda11.8 libcudnn8-dev=8.7.0.84-1+cuda11.8 -
 # Check if libssl is installed and install it if not
 if ! dpkg -l | grep -q libssl1.1; then
     echo "Installing libssl..."
-    wget http://nz2.archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
-    dpkg -i libssl1.1_1.1.1f-1ubuntu2.19_amd64.deb
+    wget http://archive.ubuntu.com/ubuntu/pool/main/o/openssl/libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
+    dpkg -i libssl1.1_1.1.1f-1ubuntu2.20_amd64.deb
 else
     echo "libssl already installed, skipping installation..."
 fi
