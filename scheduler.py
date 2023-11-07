@@ -296,7 +296,7 @@ def upload_trained_files(output_path, user_id, task_id, setting, clear=False):
                                 bucket_name=setting['bucket'],
                                 object_name=fname,
                                 file_path=file,
-                                progress=Progress(interval=3)
+                                progress=Progress(interval=10)
                             )
                             uploaded.append(fname)
                             uploaded_local.append(file)
