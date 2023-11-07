@@ -662,6 +662,10 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
         return os.path.abspath(config['output_dir'])
 
 
+def _minimal_test():
+    _train_api('minimal_test', '', 'babalala', '', '')
+
+
 def gradio_train_human_gui_tab(headless=False):
     with gr.Tab('人像训练'):
         upload_folder = gr.Textbox(visible=False)
@@ -856,6 +860,9 @@ def gradio_train_human_gui_tab(headless=False):
                 visible=False
             )
 
+        with gr.Accordion('Test', open=False):
+            test_button = gr.Button('Start minimal test')
+
         upload_images.upload(
             on_images_uploaded_simple,
             inputs=[
@@ -883,6 +890,10 @@ def gradio_train_human_gui_tab(headless=False):
             show_lora_files_,
             inputs=[output_folder, lora_postfix],
             outputs=[lora_files]
+        )
+
+        test_button.click(
+            _minimal_test
         )
 
     gradio_aurobit_video_gui_tab(headless=headless)
