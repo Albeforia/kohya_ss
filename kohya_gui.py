@@ -18,6 +18,8 @@ log = setup_logging()
 
 
 def UI(**kwargs):
+    check_necessary_files()
+
     css = ''
 
     headless = kwargs.get('headless', False)
@@ -118,8 +120,6 @@ def UI(**kwargs):
     # FIXME When queue is enabled, we have to turn off the network proxy otherwise everything is irresponsible
     # https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/9074
     interface.launch(**launch_kwargs)
-
-    check_necessary_files()
 
     if is_async:
         try:

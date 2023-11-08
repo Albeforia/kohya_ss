@@ -50,5 +50,6 @@ _workspace
 
 gfpgan
 weights
+models
 
 scheduler_settings
