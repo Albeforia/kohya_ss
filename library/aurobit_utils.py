@@ -5,8 +5,6 @@ import requests
 from minio import Minio
 from minio.error import S3Error
 
-from minio_progress import Progress
-
 
 def create_minio_client(setting):
     provider = setting['provider']
@@ -100,8 +98,7 @@ def check_necessary_files():
                     client.fget_object(
                         bucket_name=obj_store_setting['bucket'],
                         object_name=remote_path,
-                        file_path=local_path,
-                        progress=Progress(interval=5))
+                        file_path=local_path)
                     print(f"Downloaded to '{local_path}'")
                 except Exception as e:
                     print(f"Error occurred while downloading '{remote_path}': {str(e)}")
