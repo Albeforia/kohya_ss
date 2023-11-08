@@ -1,16 +1,17 @@
-import gradio as gr
-import os
 import argparse
+import os
+
+import gradio as gr
+
 from dreambooth_gui import dreambooth_tab
 from finetune_gui import finetune_tab
-from textual_inversion_gui import ti_tab
+from library.aurobit_main_gui import gradio_train_human_gui_tab
+from library.aurobit_utils import check_necessary_files
+from library.class_lora_tab import LoRATools
+from library.custom_logging import setup_logging
 from library.utilities import utilities_tab
 from lora_gui import lora_tab
-from library.class_lora_tab import LoRATools
-from library.aurobit_main_gui import gradio_train_human_gui_tab
-
-import os
-from library.custom_logging import setup_logging
+from textual_inversion_gui import ti_tab
 
 # Set up logging
 log = setup_logging()
@@ -117,6 +118,8 @@ def UI(**kwargs):
     # FIXME When queue is enabled, we have to turn off the network proxy otherwise everything is irresponsible
     # https://github.com/AUTOMATIC1111/stable-diffusion-webui/issues/9074
     interface.launch(**launch_kwargs)
+
+    check_necessary_files()
 
     if is_async:
         try:
