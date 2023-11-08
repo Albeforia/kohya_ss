@@ -1,0 +1,27 @@
+{
+  "default": "bra",
+  "majic": {
+    "path": "models/majicmixRealistic_betterV2V25.safetensors",
+    "female": "presets/lora/user_presets/lora_config.json",
+    "male": "presets/lora/user_presets/lora_config_male.json"
+  },
+  "bra": {
+    "path": "models/beautifulRealistic_brav5.safetensors",
+    "female": "presets/lora/user_presets/lora_config_bra_v0.json",
+    "male": "presets/lora/user_presets/lora_config_bra_male.json"
+  },
+  "passes": [
+    {
+      "type": "midfull_face",
+      "repeat": 10
+    },
+    {
+      "type": "whole_face",
+      "repeat": 20
+    },
+    {
+      "type": "head_no_align",
+      "repeat": 10
+    }
+  ]
+}

@@ -45,10 +45,8 @@ requirements_tmp_for_setup.txt
 0.13.3
 
 *.npz
-presets/*/user_presets/*
 
 _workspace
-training_profile.json
 
 gfpgan
 weights
