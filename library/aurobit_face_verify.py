@@ -7,13 +7,11 @@ import random
 import sys
 import timeit
 
-import requests
 import tensorflow as tf
 from PIL import Image
-from minio import Minio
-from minio.error import S3Error
 from retinaface.RetinaFace import build_model, detect_faces
 
+from library.aurobit_utils import download_image
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -21,64 +19,6 @@ log = setup_logging()
 
 tf_init = False
 is_verifying = False
-
-
-def create_minio_client(setting):
-    provider = setting['provider']
-    secret_id = setting['secret_id']
-    secret_key = setting['secret_key']
-    region = setting['region']
-    if provider == 'tencent':
-        # endpoint = format_endpoint(None, region, u'cos.', True, True)
-        pass
-    elif provider == 'amazon':
-        endpoint = f"s3.{region}.amazonaws.com"
-    else:
-        return None
-    return Minio(
-        endpoint,
-        access_key=secret_id,
-        secret_key=secret_key,
-        secure=True
-    )
-
-
-def download_image(url, path, index, setting):
-    def convert_bytes(size, unit=None):
-        if unit == "KB":
-            return print('File size: ' + str(round(size / 1024, 2)) + ' Kilobytes')
-        elif unit == "MB":
-            return print('File size: ' + str(round(size / (1024 * 1024), 2)) + ' Megabytes')
-        elif unit == "GB":
-            return print('File size: ' + str(round(size / (1024 * 1024 * 1024), 2)) + ' Gigabytes')
-        else:
-            return print('File size: ' + str(size) + ' bytes')
-
-    client = create_minio_client(setting)
-
-    use_cdn = setting.get('use_cdn', False)
-    cdn = setting.get('cdn', '')
-
-    try:
-        print(f'Downloading {url}')
-        _, ext = os.path.splitext(url)
-        local_file = os.path.join(path, f'image_{index}{ext}')
-        if not use_cdn:
-            # Directly download from S3
-            client.fget_object(
-                bucket_name=setting['bucket'],
-                object_name=url,
-                file_path=local_file)
-        else:
-            response = requests.get(cdn + '/' + url)
-            response.raise_for_status()
-            with open(local_file, 'wb') as f:
-                f.write(response.content)
-        convert_bytes(os.path.getsize(local_file), 'MB')
-        return True
-    except (S3Error, requests.HTTPError) as e:
-        print(f"[download_image] Network error: {e}")
-        return False
 
 
 def _get_image_file_paths(directory):
