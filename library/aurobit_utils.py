@@ -79,10 +79,6 @@ def download_image(url, path, index, setting):
 def check_necessary_files():
     local_remote_mapping = [
         {
-            'local': 'scheduler_settings',
-            'remote': 'yanjun/scheduler_settings'
-        },
-        {
             'local': 'DFL/facelib/2DFAN.npy',
             'remote': 'weights/DFL/facelib/2DFAN.npy'
         },
@@ -101,6 +97,17 @@ def check_necessary_files():
     ]
 
     client = create_minio_client1()
+
+    # Download scheduler_settings
+    objects = client.list_objects(os.getenv('AWS_BUCKET'), prefix='yanjun/scheduler_settings/', recursive=False)
+    if not os.path.exists('scheduler_settings'):
+        os.makedirs('scheduler_settings', exist_ok=True)
+        for obj in objects:
+            _, filename = os.path.split(obj.object_name)
+            if filename:
+                client.fget_object(os.getenv('AWS_BUCKET'), obj.object_name,
+                                   os.path.join('scheduler_settings', filename))
+
     for mapping in local_remote_mapping:
         local_path = mapping['local']
         remote_path = mapping['remote']
