@@ -1,4 +1,3 @@
-import json
 import os
 
 import requests
@@ -18,6 +17,19 @@ def create_minio_client(setting):
         endpoint = f"s3.{region}.amazonaws.com"
     else:
         return None
+    return Minio(
+        endpoint,
+        access_key=secret_id,
+        secret_key=secret_key,
+        secure=True
+    )
+
+
+def create_minio_client1():
+    secret_id = os.getenv('AWS_ACCESS_KEY_ID')
+    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY')
+    region = os.getenv('AWS_REGION')
+    endpoint = f"s3.{region}.amazonaws.com"
     return Minio(
         endpoint,
         access_key=secret_id,
@@ -67,6 +79,10 @@ def download_image(url, path, index, setting):
 def check_necessary_files():
     local_remote_mapping = [
         {
+            'local': 'scheduler_settings',
+            'remote': 'yanjun/scheduler_settings'
+        },
+        {
             'local': 'DFL/facelib/2DFAN.npy',
             'remote': 'weights/DFL/facelib/2DFAN.npy'
         },
@@ -84,21 +100,19 @@ def check_necessary_files():
         },
     ]
 
-    with open('scheduler_settings/object_store_aws.json') as f:
-        obj_store_setting = json.load(f)
-        client = create_minio_client(obj_store_setting)
-        for mapping in local_remote_mapping:
-            local_path = mapping['local']
-            remote_path = mapping['remote']
+    client = create_minio_client1()
+    for mapping in local_remote_mapping:
+        local_path = mapping['local']
+        remote_path = mapping['remote']
 
-            if not os.path.exists(local_path):
-                print(f"'{local_path}' does not exist. Downloading...")
+        if not os.path.exists(local_path):
+            print(f"'{local_path}' does not exist. Downloading...")
 
-                try:
-                    client.fget_object(
-                        bucket_name=obj_store_setting['bucket'],
-                        object_name=remote_path,
-                        file_path=local_path)
-                    print(f"Downloaded to '{local_path}'")
-                except Exception as e:
-                    print(f"Error occurred while downloading '{remote_path}': {str(e)}")
+            try:
+                client.fget_object(
+                    bucket_name=os.getenv('AWS_BUCKET'),
+                    object_name=remote_path,
+                    file_path=local_path)
+                print(f"Downloaded to '{local_path}'")
+            except Exception as e:
+                print(f"Error occurred while downloading '{remote_path}': {str(e)}")
