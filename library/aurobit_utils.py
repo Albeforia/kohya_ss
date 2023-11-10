@@ -84,7 +84,7 @@ def check_necessary_files():
         },
     ]
 
-    with open('scheduler_settings/object_store.json') as f:
+    with open('scheduler_settings/object_store_aws.json') as f:
         obj_store_setting = json.load(f)
         client = create_minio_client(obj_store_setting)
         for mapping in local_remote_mapping:
