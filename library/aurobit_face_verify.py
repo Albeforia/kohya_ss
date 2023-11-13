@@ -9,6 +9,7 @@ import timeit
 
 import tensorflow as tf
 from PIL import Image
+from fastapi.concurrency import run_in_threadpool
 from retinaface.RetinaFace import build_model, detect_faces
 
 from library.aurobit_utils import download_image
@@ -111,6 +112,31 @@ def _judge_faces(detected_faces, local_file, input_file):
     }
 
 
+def _download_and_detect(input_file, obj_store_setting):
+    global face_model
+
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + str(random.randint(0, 1000))
+    download_folder = os.path.join('_workspace', 'verify', current_time)
+    os.makedirs(download_folder, exist_ok=True)
+    start_time = timeit.default_timer()
+    if not download_image(input_file, download_folder, 0, obj_store_setting):
+        return {
+            'valid': False,
+            'reason': 'Cannot fetch image',
+            'source': input_file
+        }
+    end_time = timeit.default_timer()
+    log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
+
+    start_time = timeit.default_timer()
+    _convert_webp_to_png(download_folder)
+    files = _get_image_file_paths(download_folder)
+    detected_faces = _process_face_obj(detect_faces(files[0], 0.9, face_model))
+    end_time = timeit.default_timer()
+    log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
+    return _judge_faces(detected_faces, files[0], input_file)
+
+
 async def verify_face_api(input_file):
     global tf_init
     global face_model
@@ -130,27 +156,9 @@ async def verify_face_api(input_file):
     try:
         with open('scheduler_settings/object_store.json') as f:
             obj_store_setting = json.load(f)
-            current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S") + str(random.randint(0, 1000))
-            download_folder = os.path.join('_workspace', 'verify', current_time)
-            os.makedirs(download_folder, exist_ok=True)
-            start_time = timeit.default_timer()
-            if not download_image(input_file, download_folder, 0, obj_store_setting):
-                return {
-                    'valid': False,
-                    'reason': 'Cannot fetch image',
-                    'source': input_file
-                }
-            end_time = timeit.default_timer()
-            log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
-
-            start_time = timeit.default_timer()
-            _convert_webp_to_png(download_folder)
-            files = _get_image_file_paths(download_folder)
-            detected_faces = _process_face_obj(detect_faces(files[0], 0.9, face_model))
-            end_time = timeit.default_timer()
-            log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
-
-            return _judge_faces(detected_faces, files[0], input_file)
+            # return _download_and_detect(input_file, obj_store_setting)
+            result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
+            return result
 
     except Exception as e:
         return {
