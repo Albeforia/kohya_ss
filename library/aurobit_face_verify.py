@@ -149,9 +149,9 @@ async def verify_face_api(input_file):
     if 'face_model' not in globals():
         face_model = build_model()
 
-    while is_verifying:
-        log.info('Waiting other verify tasks to finish...')
-        await asyncio.sleep(1)
+    # while is_verifying:
+    #     log.info('Waiting other verify tasks to finish...')
+    #     await asyncio.sleep(1)
     is_verifying = True
     try:
         with open('scheduler_settings/object_store.json') as f:
