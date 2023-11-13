@@ -663,7 +663,21 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
 
 
 def _minimal_test():
-    _train_api('minimal_test', '', 'babalala', '', '')
+    input_folder = 'minimal_test'
+    files = os.listdir(input_folder)
+    for file in files:
+        if file.lower().endswith(('.png', '.jpg', '.jpeg', '.tiff', '.bmp', '.gif')):
+            first_image = file
+            break
+    else:
+        log.warning("No image files found, skip minimal test")
+        return
+    base_name, ext = os.path.splitext(first_image)
+    for i in range(1, 21):
+        new_name = f"{base_name}_{i}{ext}"
+        shutil.copy(os.path.join(input_folder, first_image), os.path.join(input_folder, new_name))
+
+    _train_api(input_folder, '', 'babalala', '', '')
 
 
 def gradio_train_human_gui_tab(headless=False):
