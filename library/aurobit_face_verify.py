@@ -8,7 +8,6 @@ import timeit
 
 import tensorflow as tf
 from PIL import Image
-from fastapi.concurrency import run_in_threadpool
 from retinaface.RetinaFace import build_model, detect_faces
 
 from library.aurobit_utils import download_image
@@ -19,6 +18,11 @@ log = setup_logging()
 
 tf_init = False
 is_verifying = False
+
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+executor = ThreadPoolExecutor(max_workers=6)
 
 
 def _get_image_file_paths(directory):
@@ -157,7 +161,8 @@ async def verify_face_api(input_file):
         obj_store_setting = json.load(f)
         f.close()
         # return _download_and_detect(input_file, obj_store_setting)
-        result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
+        # result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
+        result = await asyncio.get_event_loop().run_in_executor(executor, _download_and_detect)
         return result
 
     except Exception as e:
