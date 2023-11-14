@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import json
 import math
@@ -154,11 +153,12 @@ async def verify_face_api(input_file):
     #     await asyncio.sleep(1)
     is_verifying = True
     try:
-        with open('scheduler_settings/object_store.json') as f:
-            obj_store_setting = json.load(f)
-            # return _download_and_detect(input_file, obj_store_setting)
-            result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
-            return result
+        f = open('scheduler_settings/object_store.json')
+        obj_store_setting = json.load(f)
+        f.close()
+        # return _download_and_detect(input_file, obj_store_setting)
+        result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
+        return result
 
     except Exception as e:
         return {
