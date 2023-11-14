@@ -162,7 +162,8 @@ async def verify_face_api(input_file):
         f.close()
         # return _download_and_detect(input_file, obj_store_setting)
         # result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
-        result = await asyncio.get_event_loop().run_in_executor(executor, _download_and_detect)
+        result = await asyncio.get_event_loop().run_in_executor(executor, _download_and_detect, input_file,
+                                                                obj_store_setting)
         return result
 
     except Exception as e:
