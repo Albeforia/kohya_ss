@@ -907,7 +907,8 @@ def gradio_train_human_gui_tab(headless=False):
         )
 
         test_button.click(
-            _minimal_test
+            _minimal_test,
+            api_name='test'
         )
 
     # gradio_aurobit_video_gui_tab(headless=headless)
