@@ -65,9 +65,12 @@ def main():
     db = client[DATABASE_NAME]
     collection = db[COLLECTION_NAME]
 
-    #
-    pynvml.nvmlInit()
-    gpu_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    gpu_handle = -1
+    try:
+        pynvml.nvmlInit()
+        gpu_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+    except Exception as e:
+        print(f"pynvml initialize failed: {e}")
 
     # 写入消息到Kafka
     def write_message(message, doc_id):
@@ -83,11 +86,12 @@ def main():
 
     # 从MongoDB读取数据，并写入Kafka
     def read_from_mongo_and_write_to_kafka():
-        utilization = pynvml.nvmlDeviceGetUtilizationRates(gpu_handle)
-        # print("GPU Compute Utilization: {}%".format(utilization.gpu))
-        if utilization.gpu > 80:
-            # print("Skip because of high GPU utilization")
-            return
+        if gpu_handle != -1:
+            utilization = pynvml.nvmlDeviceGetUtilizationRates(gpu_handle)
+            # print("GPU Compute Utilization: {}%".format(utilization.gpu))
+            if utilization.gpu > 80:
+                # print("Skip because of high GPU utilization")
+                return
 
         try:
             doc = collection.find_one_and_update(
