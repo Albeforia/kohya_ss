@@ -4,6 +4,7 @@ import os
 import gradio as gr
 
 from library.aurobit_face_verify import verify_face_api
+from library.aurobit_utils import check_necessary_files
 from library.custom_logging import setup_logging
 
 # Set up logging
@@ -11,6 +12,8 @@ log = setup_logging()
 
 
 def UI(**kwargs):
+    check_necessary_files(scheduler_only=True)
+
     css = ''
 
     headless = kwargs.get('headless', True)

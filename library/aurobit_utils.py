@@ -76,7 +76,7 @@ def download_image(url, path, index, setting):
         return False
 
 
-def check_necessary_files():
+def check_necessary_files(scheduler_only=False):
     local_remote_mapping = [
         {
             'local': 'DFL/facelib/2DFAN.npy',
@@ -108,18 +108,19 @@ def check_necessary_files():
                 client.fget_object(os.getenv('AWS_BUCKET'), obj.object_name,
                                    os.path.join('scheduler_settings', filename))
 
-    for mapping in local_remote_mapping:
-        local_path = mapping['local']
-        remote_path = mapping['remote']
+    if not scheduler_only:
+        for mapping in local_remote_mapping:
+            local_path = mapping['local']
+            remote_path = mapping['remote']
 
-        if not os.path.exists(local_path):
-            print(f"'{local_path}' does not exist. Downloading...")
+            if not os.path.exists(local_path):
+                print(f"'{local_path}' does not exist. Downloading...")
 
-            try:
-                client.fget_object(
-                    bucket_name=os.getenv('AWS_BUCKET'),
-                    object_name=remote_path,
-                    file_path=local_path)
-                print(f"Downloaded to '{local_path}'")
-            except Exception as e:
-                print(f"Error occurred while downloading '{remote_path}': {str(e)}")
+                try:
+                    client.fget_object(
+                        bucket_name=os.getenv('AWS_BUCKET'),
+                        object_name=remote_path,
+                        file_path=local_path)
+                    print(f"Downloaded to '{local_path}'")
+                except Exception as e:
+                    print(f"Error occurred while downloading '{remote_path}': {str(e)}")
