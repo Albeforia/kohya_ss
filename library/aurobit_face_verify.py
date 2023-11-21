@@ -76,7 +76,7 @@ def _process_face_obj(obj):
     return resp
 
 
-def _judge_faces(detected_faces, input_img, input_file):
+def _judge_faces(detected_faces, input_img, input_file, print=False):
     ratios = []
     for face in detected_faces:
         fw = face[0][2]
@@ -84,7 +84,8 @@ def _judge_faces(detected_faces, input_img, input_file):
         ratio = math.sqrt((fw * fh) / (input_img.shape[0] * input_img.shape[1]))
         ratios.append(ratio)
 
-    print(ratios)
+    if print:
+        print(ratios)
 
     if len(detected_faces) == 0:
         return {
@@ -139,20 +140,20 @@ def _download_and_detect(input_file, obj_store_setting):
 
     # First detect via OpenCV
     opencv_face_objs = FaceDetector.detect_faces(opencv_detector, 'opencv', img, False)
-    if len(opencv_face_objs) == 0:
+    opencv_results = []
+    for _, img_region, confidence in opencv_face_objs:
+        opencv_results.append((img_region, confidence))
+    opencv_judge = _judge_faces(opencv_results, img, input_file)
+    if not opencv_judge['valid']:
         # Detect using retinaface if OpenCV failed
-        log.info("Using retinaface")
         detected_faces = _process_face_obj(detect_faces(img, 0.9, face_model))
         end_time = timeit.default_timer()
-        log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
-        return _judge_faces(detected_faces, img, input_file)
+        log.info(f"[retinaface] Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
+        return _judge_faces(detected_faces, img, input_file, print=True)
     else:
-        opencv_results = []
-        for _, img_region, confidence in opencv_face_objs:
-            opencv_results.append((img_region, confidence))
         end_time = timeit.default_timer()
-        log.info(f"Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
-        return _judge_faces(opencv_results, img, input_file)
+        log.info(f"[opencv] Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
+        return opencv_judge
 
 
 async def verify_face_api(input_file):
