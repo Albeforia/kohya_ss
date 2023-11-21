@@ -3,6 +3,7 @@ huggingface-hub==0.15.1
 pillow>=10.0.0
 rich==13.4.1
 retina-face==0.0.13
+deepface
 
 requests
 minio
