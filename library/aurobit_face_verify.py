@@ -76,16 +76,13 @@ def _process_face_obj(obj):
     return resp
 
 
-def _judge_faces(detected_faces, input_img, input_file, print=False):
+def _judge_faces(detected_faces, input_img, input_file):
     ratios = []
     for face in detected_faces:
         fw = face[0][2]
         fh = face[0][3]
         ratio = math.sqrt((fw * fh) / (input_img.shape[0] * input_img.shape[1]))
         ratios.append(ratio)
-
-    if print:
-        print(ratios)
 
     if len(detected_faces) == 0:
         return {
@@ -148,11 +145,13 @@ def _download_and_detect(input_file, obj_store_setting):
         # Detect using retinaface if OpenCV failed
         detected_faces = _process_face_obj(detect_faces(img, 0.9, face_model))
         end_time = timeit.default_timer()
-        log.info(f"[retinaface] Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
-        return _judge_faces(detected_faces, img, input_file, print=True)
+        log.info(
+            f"[retinaface] Prediction finished in {(end_time - start_time) * 1000:.2f} ms, {len(detected_faces)} faces")
+        return _judge_faces(detected_faces, img, input_file)
     else:
         end_time = timeit.default_timer()
-        log.info(f"[opencv] Prediction finished in {(end_time - start_time) * 1000:.2f} ms")
+        log.info(
+            f"[opencv] Prediction finished in {(end_time - start_time) * 1000:.2f} ms, {len(opencv_results)} faces")
         return opencv_judge
 
 
