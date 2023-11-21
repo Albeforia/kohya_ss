@@ -69,7 +69,7 @@ def main():
         "text": "PikaPiku",
         "font": "watermark/arial.ttf",
         "font_size": 40,
-        "text_color": [255, 255, 255, 10],
+        "text_color": [255, 255, 255, 25],
         "rotate_angle": 45
     }
 
