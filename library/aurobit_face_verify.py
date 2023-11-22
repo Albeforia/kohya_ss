@@ -167,8 +167,8 @@ async def verify_face_api(input_file):
 
     if 'face_model' not in globals():
         face_model = build_model()
-        # opencv_detector = FaceDetector.build_model('opencv')
-        opencv_detector = {"face_detector": cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')}
+        opencv_detector = FaceDetector.build_model('opencv')
+        # opencv_detector = {"face_detector": cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')}
 
     # while is_verifying:
     #     log.info('Waiting other verify tasks to finish...')
