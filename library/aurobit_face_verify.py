@@ -136,12 +136,16 @@ def _download_and_detect(input_file, obj_store_setting):
     img = cv2.imread(files[0], cv2.IMREAD_COLOR)
 
     # First detect via OpenCV
-    opencv_face_objs = FaceDetector.detect_faces(opencv_detector, 'opencv', img, False)
+    opencv_called = True
+    try:
+        opencv_face_objs = FaceDetector.detect_faces(opencv_detector, 'opencv', img, False)
+    except Exception as e:
+        opencv_called = False
     opencv_results = []
     for _, img_region, confidence in opencv_face_objs:
         opencv_results.append((img_region, confidence))
     opencv_judge = _judge_faces(opencv_results, img, input_file)
-    if not opencv_judge['valid']:
+    if not opencv_called or not opencv_judge['valid']:
         # Detect using retinaface if OpenCV failed
         detected_faces = _process_face_obj(detect_faces(img, 0.9, face_model))
         end_time = timeit.default_timer()
