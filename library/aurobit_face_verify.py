@@ -146,12 +146,12 @@ def _download_and_detect(input_file, obj_store_setting):
         detected_faces = _process_face_obj(detect_faces(img, 0.9, face_model))
         end_time = timeit.default_timer()
         log.info(
-            f"[retinaface] Prediction finished in {(end_time - start_time) * 1000:.2f} ms, {len(detected_faces)} faces")
+            f"[retinaface] {input_file} {(end_time - start_time) * 1000:.2f} ms, {len(detected_faces)} faces")
         return _judge_faces(detected_faces, img, input_file)
     else:
         end_time = timeit.default_timer()
         log.info(
-            f"[opencv] Prediction finished in {(end_time - start_time) * 1000:.2f} ms, {len(opencv_results)} faces")
+            f"[opencv] {input_file} {(end_time - start_time) * 1000:.2f} ms, {len(opencv_results)} faces")
         return opencv_judge
 
 
@@ -167,7 +167,8 @@ async def verify_face_api(input_file):
 
     if 'face_model' not in globals():
         face_model = build_model()
-        opencv_detector = FaceDetector.build_model('opencv')
+        # opencv_detector = FaceDetector.build_model('opencv')
+        opencv_detector = {"face_detector": cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')}
 
     # while is_verifying:
     #     log.info('Waiting other verify tasks to finish...')
