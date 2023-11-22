@@ -48,6 +48,16 @@ def _convert_to_png(directory):
             os.remove(os.path.join(directory, filename))
 
 
+def _resize_if_too_big(img, max_size):
+    height, width = img.shape[:2]
+
+    if max(height, width) > max_size:
+        scale_factor = max_size / max(height, width)
+        img = cv2.resize(img, None, fx=scale_factor, fy=scale_factor, interpolation=cv2.INTER_AREA)
+
+    return img
+
+
 def _init_tensorflow():
     gpus = tf.config.experimental.list_physical_devices('GPU')
     if gpus:
@@ -134,6 +144,7 @@ def _download_and_detect(input_file, obj_store_setting):
     _convert_to_png(download_folder)
     files = _get_image_file_paths(download_folder)
     img = cv2.imread(files[0], cv2.IMREAD_COLOR)
+    img = _resize_if_too_big(img, max_size=1024)
 
     # First detect via OpenCV
     opencv_called = True
