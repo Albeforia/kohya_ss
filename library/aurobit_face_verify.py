@@ -39,9 +39,9 @@ def _get_image_file_paths(directory):
     return image_file_paths
 
 
-def _convert_webp_to_png(directory):
+def _convert_to_png(directory):
     for filename in os.listdir(directory):
-        if filename.endswith('.webp'):
+        if not filename.endswith('.png'):
             img = Image.open(os.path.join(directory, filename))
             png_filename = filename.rstrip('.webp') + '.png'
             img.save(os.path.join(directory, png_filename), 'PNG')
@@ -131,9 +131,9 @@ def _download_and_detect(input_file, obj_store_setting):
     log.info(f"Download finished in {(end_time - start_time) * 1000:.2f} ms")
 
     start_time = timeit.default_timer()
-    _convert_webp_to_png(download_folder)
+    _convert_to_png(download_folder)
     files = _get_image_file_paths(download_folder)
-    img = cv2.imread(files[0])
+    img = cv2.imread(files[0], cv2.IMREAD_COLOR)
 
     # First detect via OpenCV
     opencv_face_objs = FaceDetector.detect_faces(opencv_detector, 'opencv', img, False)
