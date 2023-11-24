@@ -127,7 +127,7 @@ def lora_task(task_id, user_id, task_params, setting):
     def failure(reason):
         return {
             'start_time': start_time,
-            'finish_time': datetime.now(),
+            'finish_time': datetime.utcnow(),
             'status': 4,
             'info': f'Task fail: {reason}'
         }
@@ -137,7 +137,7 @@ def lora_task(task_id, user_id, task_params, setting):
             del list_input[random.randint(0, len(list_input) - 1)]
         return list_input
 
-    start_time = datetime.now()
+    start_time = datetime.utcnow()
     # 创建以 task_id 命名的目录
     img_dir = os.path.join('tmp', task_id + '_images')
     if os.path.exists(img_dir):
@@ -182,7 +182,7 @@ def lora_task(task_id, user_id, task_params, setting):
             if last_line == 'SUCCESS':
                 return {
                     'start_time': start_time,
-                    'finish_time': datetime.now(),
+                    'finish_time': datetime.utcnow(),
                     'status': 3,
                     'info': "Task success: Training finished",
                     'files': result
@@ -198,12 +198,12 @@ def highres_task(task_id, user_id, task_params, setting):
     def failure(reason):
         return {
             'start_time': start_time,
-            'finish_time': datetime.now(),
+            'finish_time': datetime.utcnow(),
             'status': 4,
             'info': f'Task highres fail: {reason}'
         }
 
-    start_time = datetime.now()
+    start_time = datetime.utcnow()
     # 创建以 task_id 命名的目录
     img_dir = os.path.join('tmp', task_id + '_images')
     if os.path.exists(img_dir):
@@ -237,7 +237,7 @@ def highres_task(task_id, user_id, task_params, setting):
                 if os.path.exists(result):
                     return {
                         'start_time': start_time,
-                        'finish_time': datetime.now(),
+                        'finish_time': datetime.utcnow(),
                         'status': 3,
                         'info': "Task success: Up-scaling finished",
                         'files': result
@@ -363,7 +363,7 @@ def handle_lora_result(result, user_id, task_id, collection_result, webhook, set
         {'$set': {
             'result': file_list,
             'taskId': task_id,
-            'updateTime': datetime.now(),
+            'updateTime': datetime.utcnow(),
         }},
         upsert=True
     )
@@ -371,9 +371,7 @@ def handle_lora_result(result, user_id, task_id, collection_result, webhook, set
     data = {
         'userId': user_id,
         'taskId': task_id,
-        'finishTime': result['finish_time'].strftime("%Y-%m-%d %H:%M:%S"),
-        "taskTpye": "test",
-        "name": "test",
+        'finishTime': str(result['finish_time']),
         'status': True,
         'reason': ''
     }
@@ -435,7 +433,7 @@ def handle_highres_result(result, user_id, task_id, task_params, collection_resu
         {'$set': {
             # 'result': result_imgs,
             'resultWithWaterMark': result_imgs_watermark,
-            'updateTime': datetime.now(),
+            'updateTime': datetime.utcnow(),
         }}
     )
 
@@ -542,9 +540,7 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
                     data = {
                         'userId': user_id,
                         'taskId': task_id,
-                        'finishTime': result['finish_time'].strftime("%Y-%m-%d %H:%M:%S"),
-                        "taskTpye": "test",
-                        "name": "test",
+                        'finishTime': str(result['finish_time']),
                         'status': False,  # Fail
                         'reason': result['info']
                     }
