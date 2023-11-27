@@ -58,15 +58,18 @@ def _resize_if_too_big(img, max_size):
     return img
 
 
-def _init_tensorflow():
-    gpus = tf.config.experimental.list_physical_devices('GPU')
-    if gpus:
-        try:
-            tf.config.experimental.set_virtual_device_configuration(
-                gpus[0],
-                [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6500)])
-        except RuntimeError as e:
-            log.error(e)
+def _init_tensorflow(use_gpu=True):
+    if use_gpu:
+        gpus = tf.config.experimental.list_physical_devices('GPU')
+        if gpus:
+            try:
+                tf.config.experimental.set_virtual_device_configuration(
+                    gpus[0],
+                    [tf.config.experimental.VirtualDeviceConfiguration(memory_limit=6500)])
+            except RuntimeError as e:
+                log.error(e)
+    else:
+        tf.config.set_visible_devices([], 'GPU')
 
 
 def _process_face_obj(obj):
@@ -170,7 +173,44 @@ def _download_and_detect(input_file, obj_store_setting):
         return opencv_judge
 
 
+# Parallel processing via CPU
 async def verify_face_api(input_file):
+    global tf_init
+    global face_model
+    global opencv_detector
+    global is_verifying
+
+    if not tf_init:
+        _init_tensorflow(use_gpu=False)
+        tf_init = True
+
+    if 'face_model' not in globals():
+        face_model = build_model()
+        opencv_detector = FaceDetector.build_model('opencv')
+        # opencv_detector = {"face_detector": cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')}
+
+    is_verifying = True
+    try:
+        f = open('scheduler_settings/object_store.json')
+        obj_store_setting = json.load(f)
+        f.close()
+        # return _download_and_detect(input_file, obj_store_setting)
+        # result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
+        result = await asyncio.get_event_loop().run_in_executor(executor, _download_and_detect, input_file,
+                                                                obj_store_setting)
+        return result
+
+    except Exception as e:
+        return {
+            'valid': False,
+            'reason': str(e),
+            'source': input_file
+        }
+    finally:
+        is_verifying = False
+
+
+async def verify_face_api_gpu(input_file):
     global tf_init
     global face_model
     global opencv_detector
@@ -185,19 +225,15 @@ async def verify_face_api(input_file):
         opencv_detector = FaceDetector.build_model('opencv')
         # opencv_detector = {"face_detector": cv2.CascadeClassifier('lbpcascade_frontalface_improved.xml')}
 
-    # while is_verifying:
-    #     log.info('Waiting other verify tasks to finish...')
-    #     await asyncio.sleep(1)
+    while is_verifying:
+        log.info('Waiting other verify tasks to finish...')
+        await asyncio.sleep(1)
     is_verifying = True
     try:
         f = open('scheduler_settings/object_store.json')
         obj_store_setting = json.load(f)
         f.close()
-        # return _download_and_detect(input_file, obj_store_setting)
-        # result = await run_in_threadpool(_download_and_detect, input_file, obj_store_setting)
-        result = await asyncio.get_event_loop().run_in_executor(executor, _download_and_detect, input_file,
-                                                                obj_store_setting)
-        return result
+        return _download_and_detect(input_file, obj_store_setting)
 
     except Exception as e:
         return {
