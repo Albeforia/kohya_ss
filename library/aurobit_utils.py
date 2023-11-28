@@ -3,6 +3,7 @@ import os
 import requests
 from minio import Minio
 from minio.error import S3Error
+from qcloud_cos.cos_comm import format_endpoint
 
 
 def create_minio_client(setting):
@@ -11,8 +12,7 @@ def create_minio_client(setting):
     secret_key = setting['secret_key']
     region = setting['region']
     if provider == 'tencent':
-        # endpoint = format_endpoint(None, region, u'cos.', True, True)
-        raise Exception()
+        endpoint = format_endpoint(None, region, u'cos.', True, True)
     elif provider == 'amazon':
         endpoint = f"s3.{region}.amazonaws.com"
     else:
