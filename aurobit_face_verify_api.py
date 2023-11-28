@@ -3,7 +3,7 @@ import os
 
 import gradio as gr
 
-from library.aurobit_face_verify import verify_face_api, verify_face_api_gpu
+from library.aurobit_face_verify import verify_face_api, verify_face_api_gpu, verify_face_api_bypass
 from library.aurobit_utils import check_necessary_files
 from library.custom_logging import setup_logging
 
@@ -20,6 +20,7 @@ def UI(**kwargs):
     log.info(f'headless: {headless}')
 
     use_gpu = kwargs.get('gpu', False)
+    bypass = kwargs.get('bypass', False)
 
     if os.path.exists('./style.css'):
         with open(os.path.join('./style.css'), 'r', encoding='utf8') as file:
@@ -43,16 +44,24 @@ def UI(**kwargs):
             api_only_detect_input = gr.Textbox('', visible=False)
             api_only_detect_result = gr.JSON(visible=False)
             api_only_detect = gr.Button('', visible=False)
-            if use_gpu:
-                api_only_detect.click(
-                    verify_face_api_gpu,
-                    inputs=[api_only_detect_input],
-                    outputs=[api_only_detect_result],
-                    api_name='face_verify'
-                )
+            if not bypass:
+                if use_gpu:
+                    api_only_detect.click(
+                        verify_face_api_gpu,
+                        inputs=[api_only_detect_input],
+                        outputs=[api_only_detect_result],
+                        api_name='face_verify'
+                    )
+                else:
+                    api_only_detect.click(
+                        verify_face_api,
+                        inputs=[api_only_detect_input],
+                        outputs=[api_only_detect_result],
+                        api_name='face_verify'
+                    )
             else:
                 api_only_detect.click(
-                    verify_face_api,
+                    verify_face_api_bypass,
                     inputs=[api_only_detect_input],
                     outputs=[api_only_detect_result],
                     api_name='face_verify'
@@ -113,6 +122,7 @@ if __name__ == '__main__':
         '--headless', action='store_true', help='Is the server headless'
     )
     parser.add_argument('--gpu', action='store_true')
+    parser.add_argument('--bypass', action='store_true')
 
     args = parser.parse_args()
 
@@ -125,4 +135,5 @@ if __name__ == '__main__':
         listen=args.listen,
         headless=args.headless,
         gpu=args.gpu,
+        bypass=args.bypass
     )

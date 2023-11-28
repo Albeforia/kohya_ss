@@ -245,6 +245,14 @@ async def verify_face_api_gpu(input_file):
         is_verifying = False
 
 
+async def verify_face_api_bypass(input_file):
+    return {
+        'valid': True,
+        'reason': 'bypass',
+        'source': input_file
+    }
+
+
 if __name__ == "__main__":
     if len(sys.argv) >= 2:
         file_path = sys.argv[1]
