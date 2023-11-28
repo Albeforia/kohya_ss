@@ -9,6 +9,8 @@ import traceback
 from pathlib import Path
 
 import gradio as gr
+import imageio
+import numpy as np
 from PIL import Image
 
 import library.train_util as train_util
@@ -25,6 +27,9 @@ log = setup_logging()
 
 
 training_profile_file = 'training_profile.json'
+
+VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.flv', '.mkv']
+BEST_IMAGE_COUNT = 22
 
 
 def run_cmd_with_log(cmd, api_call, log_file):
@@ -49,22 +54,6 @@ def get_matting_cmd(from_folder, to_folder):
     return run_cmd
 
 
-def on_images_uploaded_simple(files):
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    output_folder = os.path.join('_workspace', 'temp', current_time)
-    os.makedirs(output_folder)
-
-    # Move images to workspace
-    for file in files:
-        filepath = file if isinstance(file, str) else file.name
-        _, ext = os.path.splitext(filepath)
-        ext = ext.lower()
-        if ext in ['.png', '.jpg', '.jpeg']:
-            shutil.move(filepath, output_folder)
-
-    return output_folder
-
-
 def compute_max_epochs(N):
     if N <= 20:
         return 10
@@ -72,6 +61,57 @@ def compute_max_epochs(N):
         return 10 + (N - 20) // 2
     else:
         return 20
+
+
+def slice_video(input_file, desired_count, output_path):
+    try:
+        reader = imageio.get_reader(input_file)
+    except Exception as e:
+        log.warning(f'Skip processing {input_file} because of error {e}')
+
+    log.info(f'Extracting frames from {input_file}')
+
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+
+    frames = []
+    for i, frame in enumerate(reader):
+        frames.append(frame)
+
+    if desired_count < len(frames):
+        indices = np.linspace(0, len(frames) - 1, desired_count, dtype=int)
+        sub_frames = [frames[i] for i in indices]
+    else:
+        sub_frames = frames
+
+    for i, frame in enumerate(sub_frames):
+        Image.fromarray(frame).save(os.path.join(output_path, f'{base_name}_frame{i}.jpg'))
+
+    log.info(f'Extracted {len(sub_frames)} frames from {input_file}')
+
+
+def on_images_uploaded_simple(files):
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    output_folder = os.path.join('_workspace', 'temp', current_time)
+    os.makedirs(output_folder)
+
+    # Move images to workspace
+    image_count = 0
+    video_candidate = None
+    for file in files:
+        filepath = file if isinstance(file, str) else file.name
+        _, ext = os.path.splitext(filepath)
+        ext = ext.lower()
+        if ext in ['.png', '.jpg', '.jpeg']:
+            shutil.move(filepath, output_folder)
+            image_count += 1
+        elif ext in VIDEO_EXTENSIONS:
+            video_candidate = filepath
+    if video_candidate:
+        remaining = BEST_IMAGE_COUNT - image_count
+        if remaining > 0:
+            slice_video(video_candidate, remaining, output_folder)
+
+    return output_folder
 
 
 def on_images_uploaded(
@@ -88,12 +128,21 @@ def on_images_uploaded(
     os.makedirs(final_output_folder)
 
     # Move images to workspace
+    image_count = 0
+    video_candidate = None
     for file in files:
         filepath = file if isinstance(file, str) else file.name
         _, ext = os.path.splitext(filepath)
         ext = ext.lower()
         if ext in ['.png', '.jpg', '.jpeg']:
             shutil.move(filepath, output_folder)
+            image_count += 1
+        elif ext in VIDEO_EXTENSIONS:
+            video_candidate = filepath
+    if video_candidate:
+        remaining = BEST_IMAGE_COUNT - image_count
+        if remaining > 0:
+            slice_video(video_candidate, remaining, output_folder)
 
     # Analysis
     run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
