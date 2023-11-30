@@ -23,14 +23,16 @@ class BlurEstimatorSubprocessor(Subprocessor):
             filepath = Path(data[0])
             dflimg = DFLIMG.load(filepath)
 
-            if dflimg is None or not dflimg.has_data():
+            #if dflimg is None or not dflimg.has_data():
+            if False:
                 self.log_err(f"{filepath.name} is not a dfl image file")
                 return [str(filepath), 0]
             else:
                 image = cv2_imread(str(filepath))
 
-                face_mask = LandmarksProcessor.get_image_hull_mask(image.shape, dflimg.get_landmarks())
-                image = (image * face_mask).astype(np.uint8)
+                if dflimg is not None and dflimg.has_data():
+                    face_mask = LandmarksProcessor.get_image_hull_mask(image.shape, dflimg.get_landmarks())
+                    image = (image * face_mask).astype(np.uint8)
 
                 if self.estimate_motion_blur:
                     value = cv2.Laplacian(image, cv2.CV_64F, ksize=11).var()
@@ -906,20 +908,20 @@ def final_process(input_path, img_list, trash_img_list):
         # Ensure all files have different names
         for i in io.progress_bar_generator([*range(len(img_list))], "Renaming", leave=False):
             src = Path(get_first_elem_or_self(img_list[i]))
-            dst = input_path / ('%.5d_%s' % (i, src.name))
+            dst = input_path / ('%d_%s' % (i, src.name))
             try:
                 src.rename(dst)
             except:
                 io.log_info('fail to rename %s' % (src.name))
 
-        for i in io.progress_bar_generator([*range(len(img_list))], "Renaming"):
-            src = Path(get_first_elem_or_self(img_list[i]))
-            src = input_path / ('%.5d_%s' % (i, src.name))
-            dst = input_path / ('%s%s' % (uuid.uuid4(), src.suffix))
-            try:
-                src.rename(dst)
-            except:
-                io.log_info('fail to rename %s' % (src.name))
+        # for i in io.progress_bar_generator([*range(len(img_list))], "Renaming"):
+        #     src = Path(get_first_elem_or_self(img_list[i]))
+        #     src = input_path / ('%.5d_%s' % (i, src.name))
+        #     dst = input_path / ('%s%s' % (uuid.uuid4(), src.suffix))
+        #     try:
+        #         src.rename(dst)
+        #     except:
+        #         io.log_info('fail to rename %s' % (src.name))
 
 
 sort_func_methods = {

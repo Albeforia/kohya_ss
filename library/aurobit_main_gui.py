@@ -11,6 +11,7 @@ from pathlib import Path
 import gradio as gr
 import imageio
 import numpy as np
+import regex as re
 from PIL import Image
 
 import library.train_util as train_util
@@ -29,7 +30,7 @@ log = setup_logging()
 training_profile_file = 'training_profile.json'
 
 VIDEO_EXTENSIONS = ['.mp4', '.mov', '.avi', '.flv', '.mkv']
-BEST_IMAGE_COUNT = 22
+BEST_IMAGE_COUNT = 21
 
 
 def run_cmd_with_log(cmd, api_call, log_file):
@@ -63,7 +64,7 @@ def compute_max_epochs(N):
         return 20
 
 
-def slice_video(input_file, desired_count, output_path):
+def slice_video(input_file, desired_count, output_path, api_call, log_file=None):
     try:
         reader = imageio.get_reader(input_file)
     except Exception as e:
@@ -72,21 +73,52 @@ def slice_video(input_file, desired_count, output_path):
     log.info(f'Extracting frames from {input_file}')
 
     base_name = os.path.splitext(os.path.basename(input_file))[0]
+    tmp_folder = os.path.join(output_path, 'slices')
+    os.makedirs(tmp_folder)
 
     frames = []
     for i, frame in enumerate(reader):
         frames.append(frame)
+        Image.fromarray(frame).save(os.path.join(tmp_folder, f'frame{i}.jpg'))
 
+    log.info(f'Extracted {len(frames)} frames from {input_file}')
+
+    # Sorting
+    sort_cmd = f'accelerate launch "{os.path.join("DFL/mainscripts", "Sorter.py")}"'
+    sort_cmd += f' "{tmp_folder}"'
+    sort_cmd += f' "motion-blur"'  # Sort method
+    sort_cmd += f' "0"'  # Drop threshold (sharpness)
+    run_cmd_with_log(sort_cmd, api_call, log_file)
+
+    # Gather sorted files
+    filenames = os.listdir(tmp_folder)
+    img_info = []
+    for filename in filenames:
+        match = re.match(r'(\d+)_frame(\d+).jpg', filename)
+        if match:
+            id = int(match.group(1))
+            frame = int(match.group(2))
+            full_path = os.path.join(tmp_folder, filename)
+            img_info.append((id, frame, full_path))
+    img_info.sort(key=lambda x: x[0])
+
+    # Remove the last 50% images
+    img_info = img_info[:len(img_info) // 2]
+
+    # Re-order by frame id
+    img_info = sorted(img_info, key=lambda x: x[1])
+
+    # Sampling
     if desired_count < len(frames):
-        indices = np.linspace(0, len(frames) - 1, desired_count, dtype=int)
-        sub_frames = [frames[i] for i in indices]
+        indices = np.linspace(0, len(img_info) - 1, desired_count, dtype=int)
+        sub_frames = [img_info[i] for i in indices]
     else:
-        sub_frames = frames
+        sub_frames = img_info
 
-    for i, frame in enumerate(sub_frames):
-        Image.fromarray(frame).save(os.path.join(output_path, f'{base_name}_frame{i}.jpg'))
+    for _, _, path in sub_frames:
+        shutil.move(path, os.path.join(output_path, os.path.basename(path)))
 
-    log.info(f'Extracted {len(sub_frames)} frames from {input_file}')
+    shutil.rmtree(tmp_folder)
 
 
 def on_images_uploaded_simple(files):
@@ -109,7 +141,7 @@ def on_images_uploaded_simple(files):
     if video_candidate:
         remaining = BEST_IMAGE_COUNT - image_count
         if remaining > 0:
-            slice_video(video_candidate, remaining, output_folder)
+            slice_video(video_candidate, remaining, output_folder, api_call=False)
 
     return output_folder
 
@@ -142,7 +174,7 @@ def on_images_uploaded(
     if video_candidate:
         remaining = BEST_IMAGE_COUNT - image_count
         if remaining > 0:
-            slice_video(video_candidate, remaining, output_folder)
+            slice_video(video_candidate, remaining, output_folder, api_call, log_file)
 
     # Analysis
     run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
@@ -770,7 +802,6 @@ def gradio_train_human_gui_tab(headless=False):
                         'whole_face_no_align',
                         'head',
                         'head_no_align',
-                        'best_faces'
                     ],
                     value='full_face'
                 )
