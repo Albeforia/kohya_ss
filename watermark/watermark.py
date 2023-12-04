@@ -46,9 +46,9 @@ def _add_watermark(params, img):
     mark_img = mark_img.rotate(params['rotate_angle'])
 
     # crop watermark image
-    left = (s_ext - img_size[0]) / 2
+    left = int((s_ext - img_size[0]) / 2)
     right = left + img_size[0]
-    top = (s_ext - img_size[1]) / 2
+    top = int((s_ext - img_size[1]) / 2)
     bottom = top + img_size[1]
     mark_img = mark_img.crop((left, top, right, bottom))
 
