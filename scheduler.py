@@ -368,12 +368,21 @@ def handle_lora_result(result, user_id, task_id, collection_result, webhook, set
         upsert=True
     )
 
+    # detect gender
+    faces_file = f"{result['files']}/faces.txt"
+    gender = 'female'
+    if os.path.exists(faces_file):
+        with open(faces_file) as f:
+            j = json.load(f)
+            gender = 'male' if j['stats']['most_common_gender'] == 'Man' else 'female'
+
     data = {
         'userId': user_id,
         'taskId': task_id,
         'finishTime': str(result['finish_time']),
         'status': True,
-        'reason': ''
+        'reason': '',
+        'gender': gender
     }
     data = json.dumps(data, indent=4, default=str)
     headers = {
@@ -542,7 +551,8 @@ def scan_and_do_task(consumer, collection, collection_result, setting):
                         'taskId': task_id,
                         'finishTime': str(result['finish_time']),
                         'status': False,  # Fail
-                        'reason': result['info']
+                        'reason': result['info'],
+                        'gender': 'female'
                     }
                 elif task_type == 'highres_task':
                     data = {
