@@ -18,7 +18,10 @@ log = setup_logging()
 
 
 def UI(**kwargs):
-    check_necessary_files()
+    try:
+        check_necessary_files()
+    except Exception as e:
+        log.warning(f'Checking files failed: {e}')
 
     css = ''
 
