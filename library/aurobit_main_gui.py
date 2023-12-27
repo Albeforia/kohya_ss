@@ -150,6 +150,7 @@ def on_images_uploaded(
         files,
         auto_matting,
         auto_upscale,
+        analysis_face=True,
         api_call=False
 ):
     current_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
@@ -176,52 +177,55 @@ def on_images_uploaded(
         if remaining > 0:
             slice_video(video_candidate, remaining, output_folder, api_call, log_file)
 
-    # Analysis
-    run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
-    run_cmd0 += f' "--input_path={output_folder}"'
-    run_cmd0 += f' "--detect_mode=retinaface"'
-    run_cmd0 += f' "--output_path={final_output_folder}"'
-    run_cmd_with_log(run_cmd0, api_call, log_file)
-    with open(f'{final_output_folder}/faces.txt') as f:
-        j = json.load(f)
-        detected_faces = j['faces']
-        analysis_result = j['stats']
-        invalid_images = j['invalid']
+    max_epochs = 20
+    analysis_result = {'Analysis skipped'}
+    if analysis_face:
+        # Analysis
+        run_cmd0 = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_face_analysis_script.py")}"'
+        run_cmd0 += f' "--input_path={output_folder}"'
+        run_cmd0 += f' "--detect_mode=retinaface"'
+        run_cmd0 += f' "--output_path={final_output_folder}"'
+        run_cmd_with_log(run_cmd0, api_call, log_file)
+        with open(f'{final_output_folder}/faces.txt') as f:
+            j = json.load(f)
+            detected_faces = j['faces']
+            analysis_result = j['stats']
+            invalid_images = j['invalid']
 
-    # Delete invalid images
-    for invalid_img in invalid_images:
-        os.remove(invalid_img)
+        # Delete invalid images
+        for invalid_img in invalid_images:
+            os.remove(invalid_img)
 
-    # Compute training epochs according to faces count
-    max_epochs = compute_max_epochs(len(detected_faces))
+        # Compute training epochs according to faces count
+        max_epochs = compute_max_epochs(len(detected_faces))
 
-    if auto_upscale:
-        to_upscale = set()
-        for face_data in detected_faces:
-            # TODO Hard-coded threshold
-            if min(face_data['size']) < 256:
-                to_upscale.add(face_data['source'])
+        if auto_upscale:
+            to_upscale = set()
+            for face_data in detected_faces:
+                # TODO Hard-coded threshold
+                if min(face_data['size']) < 256:
+                    to_upscale.add(face_data['source'])
 
-        if len(to_upscale) > 0:
-            tmp_folder = os.path.join(output_folder, '..', 'temp')
-            os.makedirs(tmp_folder, exist_ok=True)
-            for f in to_upscale:
-                shutil.move(f, tmp_folder)
-            # run_cmdx = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
-            # run_cmdx += f' "--input_path={tmp_folder}"'
-            # run_cmdx += f' "--scale=2"'
-            # run_cmdx += f' "--output_path={output_folder}"'
-            # Use codeformer instead (slower)
-            run_cmdx = f'accelerate launch "{os.path.join("CodeFormer", "inference_codeformer.py")}"'
-            run_cmdx += f' "--input_path={tmp_folder}"'
-            run_cmdx += f' "--fidelity_weight=0.85"'
-            run_cmdx += f' "--output_path={tmp_folder}"'
-            run_cmdx += f' "--bg_upsampler=realesrgan"'
-            run_cmdx += f' "--face_upsample"'
-            run_cmd_with_log(run_cmdx, api_call, log_file)
-            for f in os.listdir(os.path.join(tmp_folder, 'final_results')):
-                shutil.move(os.path.join(tmp_folder, 'final_results', f), output_folder)
-            # shutil.rmtree(tmp_folder)
+            if len(to_upscale) > 0:
+                tmp_folder = os.path.join(output_folder, '..', 'temp')
+                os.makedirs(tmp_folder, exist_ok=True)
+                for f in to_upscale:
+                    shutil.move(f, tmp_folder)
+                # run_cmdx = f'accelerate launch "{os.path.join("custom_scripts", "aurobit_upscale_script.py")}"'
+                # run_cmdx += f' "--input_path={tmp_folder}"'
+                # run_cmdx += f' "--scale=2"'
+                # run_cmdx += f' "--output_path={output_folder}"'
+                # Use codeformer instead (slower)
+                run_cmdx = f'accelerate launch "{os.path.join("CodeFormer", "inference_codeformer.py")}"'
+                run_cmdx += f' "--input_path={tmp_folder}"'
+                run_cmdx += f' "--fidelity_weight=0.85"'
+                run_cmdx += f' "--output_path={tmp_folder}"'
+                run_cmdx += f' "--bg_upsampler=realesrgan"'
+                run_cmdx += f' "--face_upsample"'
+                run_cmd_with_log(run_cmdx, api_call, log_file)
+                for f in os.listdir(os.path.join(tmp_folder, 'final_results')):
+                    shutil.move(os.path.join(tmp_folder, 'final_results', f), output_folder)
+                # shutil.rmtree(tmp_folder)
 
     # Update folders for lora config
     with open(training_profile_file) as f:
@@ -230,7 +234,7 @@ def on_images_uploaded(
     basemodel_profile = training_profile[basemodel_type]
 
     mode = 'female'
-    if analysis_result['most_common_gender'] == 'Man':
+    if analysis_face and analysis_result['most_common_gender'] == 'Man':
         mode = 'male'
     config_file_path = basemodel_profile[mode]
 
@@ -322,6 +326,16 @@ def process_images(
         lora_config_json,
         api_call=False,
 ):
+    def output():
+        images = list(Path(output_folder).glob('*'))
+        preview_images_dict.update({output_folder: images})
+        return [
+            f"{input_folder}/../processed",
+            # show Gallery
+            gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
+            gr.update(value=f"`Face detection done, {face_type}`"),
+        ]
+
     if input_folder == '':
         return [
             "",
@@ -333,6 +347,10 @@ def process_images(
         output_folder = f"{input_folder}/../best_faces"
         face_type = 'whole_face'
         find_best = True
+    elif face_type == 'bypass':
+        output_folder = f"{input_folder}/../processed"
+        os.rename(input_folder, output_folder)
+        return output()
     else:
         output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
         find_best = False
@@ -357,16 +375,6 @@ def process_images(
     # run_cmd3 += f' "{trash_path}"'
     # run_cmd3 += f' "{fixed_path}"'
     # run_cmd3 += f' "{output_folder}"'
-
-    def output():
-        images = list(Path(output_folder).glob('*'))
-        preview_images_dict.update({output_folder: images})
-        return [
-            f"{input_folder}/../processed",
-            # show Gallery
-            gr.update(value=[img for sublist in preview_images_dict.values() for img in sublist], visible=True),
-            gr.update(value=f"`Face detection done, {face_type}`"),
-        ]
 
     run_cmd_with_log(run_cmd, api_call, log_file)
 
@@ -463,6 +471,7 @@ def caption_images(
         undesired_tags,
         prefix,
         postfix,
+        random_flip,
         api_call=False,
 ):
     # Check for images_dir_input
@@ -488,7 +497,8 @@ def caption_images(
         run_cmd += f' --undesired_tags="{undesired_tags}"'
     run_cmd += f' "{train_data_dir}"'
 
-    random_pick_image_and_flip(train_data_dir)
+    if random_flip:
+        random_pick_image_and_flip(train_data_dir)
 
     run_cmd_with_log(run_cmd, api_call, f"{train_data_dir}/../output/log.txt")
 
@@ -561,6 +571,10 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
                 step=0.05,
                 visible=False
             )
+            random_flip = gr.Checkbox(
+                value=False,
+                label='Random flip',
+            )
 
         caption_button = gr.Button('Caption images', variant='primary')
 
@@ -574,6 +588,7 @@ def _gradio_wd14_caption_gui(train_folder, info_text):
                 undesired_tags,
                 prefix,
                 postfix,
+                random_flip,
             ],
             outputs=[info_text],
         )
@@ -678,6 +693,7 @@ def _train_api(input_folder, model_path, trigger_words, task_id, user_id):
             'long hair, short hair, brown hair, black hair, brown eyes, black eyes, lips, teeth, nose, portrait, forehead',
             trigger_words,
             '',
+            random_flip=True,
             api_call=True
         )
 
@@ -781,6 +797,7 @@ def gradio_train_human_gui_tab(headless=False):
                 with gr.Column(scale=0):
                     auto_matting = gr.Checkbox(value=True, label='Auto matting')
                     auto_upscale = gr.Checkbox(value=True, label='Auto upscale')
+                    analysis_face = gr.Checkbox(value=True, label='Analysis face')
                     clear_upload_button = gr.Button('Clear uploaded images', variant='stop')
                     clear_train_button = gr.Button('Clear training folder', variant='stop')
 
@@ -802,6 +819,7 @@ def gradio_train_human_gui_tab(headless=False):
                         'whole_face_no_align',
                         'head',
                         'head_no_align',
+                        'bypass',
                     ],
                     value='full_face'
                 )
@@ -846,6 +864,7 @@ def gradio_train_human_gui_tab(headless=False):
                 upload_images,  # files
                 auto_matting,
                 auto_upscale,
+                analysis_face,
             ],
             outputs=[
                 upload_folder,
