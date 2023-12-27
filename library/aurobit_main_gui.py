@@ -350,6 +350,7 @@ def process_images(
     elif face_type == 'bypass':
         output_folder = f"{input_folder}/../processed"
         os.rename(input_folder, output_folder)
+        os.makedirs(input_folder, exist_ok=True)
         return output()
     else:
         output_folder = f"{input_folder}/../processed/{repeat}_{face_type}"
